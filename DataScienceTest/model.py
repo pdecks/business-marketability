@@ -40,6 +40,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.externals import joblib
 
 import csv
+import json
 
 ## DIRECTORIES FOR PICKLING CLASSIFIER & COMPONENTS ##########################
 
@@ -67,13 +68,14 @@ def loads_data(filepath):
         for i, row in enumerate(datadict):
             if i == 0:
                 continue
-            if 0 < i < 6:
-                print
-                print "ROW", i
-                print row
-                all_data.append(row)
-            else:
-                break
+            all_data.append(row)
+            # if 0 < i < 100:
+                # print
+                # print "ROW", i
+                # print row
+                # all_data.append(row)
+            # else:
+                # break
     csvfile.close()
 
     return all_data, fieldnames
@@ -84,6 +86,7 @@ def list_of_dicts_to_np(list_of_dicts, fields=None):
 
     fields: list of fieldnames to use. If fields == None, use all fieldnames.
             Else, use subset of fieldnames specified.
+
     """
     
     # check data types
@@ -111,10 +114,39 @@ def list_of_dicts_to_np(list_of_dicts, fields=None):
     return X
 
 
+def loads_labels_to_np(filepath, list_of_dicts, id_field):
+    """Load JSON target labels and match to all_data"""
+
+    # check data types
+    if type(list_of_dicts) != list or type(list_of_dicts[0]) != dict:
+        raise TypeError('list_of_dicts must be a list of dictionaries')
+    
+    if not list_of_dicts:
+        raise ValueError('list_of_dicts must not be an empty list')
+
+
+    with open(filepath) as data_file:    
+        json_data = json.load(data_file)
+
+    y = [0] * len(list_of_dicts)
+    # import pdb; pdb.set_trace()
+    for i, row in enumerate(list_of_dicts):
+        y[i] = json_data[row[id_field]]
+
+    return np.array(y)
+
+
+# define filepaths
 train_path = 'data/DS_train.csv'
+json_path = 'data/DS_train_labels.json'
+
+# load the data
 all_data, fieldnames = loads_data(train_path)
+
+# create np arrays for training data and target labels
 subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
 X = list_of_dicts_to_np(all_data, subfields)
+y = loads_labels_to_np(json_path, all_data, 'unique_id')
 
 # def create_vectorizer(X_train):
 #     """Returns a sklearn vectorizer fit to training data.
