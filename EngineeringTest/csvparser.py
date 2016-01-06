@@ -10,7 +10,9 @@ rmation for each of the columns in the CSV file
 >>> chau,30,94110
 "String", "Numeric", "Numeric"
 
-Edge case: '94110' should return a string
+Edge case: '94110' should return a string, such that regex should handle \'94105\'
+            Handled by not removing extra quotation marks if string does not
+            contain a comma.
 """
 
 import os
@@ -28,7 +30,9 @@ csv_pat = re.compile(r"""
        )*              # ...repeated any number of times.
       "                # Followed by a closing double-quote.
       |                # OR
-      '(?:[^'\\]|\\.)*'# Same as above, for single quotes.
+      '(?:             # Same as above, for single quotes.
+          [^'\\]|\\.
+       )*'              
     )                  # Done capturing.
     \s*                # Allow arbitrary space before the comma.
     (?:,|$)            # Followed by a comma or the end of a string.
@@ -75,15 +79,19 @@ class CSVParse(object):
 
         for filename in self.csv_files:
             print "FILE:", filename
+
+
             # Read CSV
             self.curr_data = [line.rstrip('\n').rstrip('\r') for line in open(filename, 'rb')]
             self.clean_data = [csv_pat.findall(item) for item in self.curr_data]
             # clean off extra quotations surrounding strings with commas
             for row in self.clean_data:
+                # if filename == 'example2.csv':
+                #     import pdb; pdb.set_trace()
                 for i, item in enumerate(row):
-                    if '"' in item:
+                    if '"' in item and ',' in item:
                         row[i] = item.strip('"')
-                    if "'" in item:
+                    elif "'" in item and ',' in item:
                         row[i] = item.strip("'")
             # add current clean data to dictionary by filename
             self.all_data[filename] = self.clean_data
@@ -94,6 +102,7 @@ class CSVParse(object):
     def types(self, filename):
         """Return the data type information for all cells in a file."""
         types_by_row = []
+
         for j, row in enumerate(self.all_data[filename]):
             curr_row = 'List('
             for i, item in enumerate(row):
@@ -112,6 +121,7 @@ class CSVParse(object):
         
         return
 
+
 if __name__ == "__main__":
     my_dir = "."
 
@@ -122,7 +132,15 @@ if __name__ == "__main__":
     print "Reading files in current working directory ..."
     CSV_reader.read()
 
-    my_file = 'example.csv'
-    print
-    print "Reading data type information for file %s ..." % my_file
-    CSV_reader.types(my_file)
+    test_files = ['example.csv', 'example2.csv']
+    for test_file in test_files:
+        print
+        print "FILE:", test_file
+        print "File information by row ... "
+        for i, row in enumerate(CSV_reader.all_data[test_file]):
+            print "ROW %d: %s" % (i, row)
+        print
+        print "Reading data type information by row ..."
+        CSV_reader.types(test_file)
+
+
