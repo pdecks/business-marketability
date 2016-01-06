@@ -1,5 +1,5 @@
 #Understanding the Problem 
-This is a supervised learning exercise because we are supplied with target labels for the training dataset. Supervised learning can be further broken down into two categories, classification and regression. In classification, the label is discrete, while in regression, the label is continuous. Here, we have discrete labels that also happen to be binary values. Therefore, this exercise is a binary classification problem. 
+This is a supervised learning exercise because we are supplied with targets for the training dataset. Supervised learning can be further broken down into two categories, classification and regression. In classification, the label is discrete, while in regression, the label is continuous. Here, we have discrete labels that also happen to be binary values. Therefore, this exercise is a binary classification problem. 
 
 
 ##Questions that arose when looking at the headers for the training data
@@ -52,10 +52,10 @@ Some of the methods commonly used for binary classification are:
 ##Model Selection
 
 Following the (#Scikit Learn Machine Learning Map)http://scikit-learn.org/stable/tutorial/machine_learning_map/,
-the data has more than 50 samples but less than 100k samples and we have target labels for the training data.
+the data has more than 50 samples but less than 100k samples and we have targets for the training data.
 According to this guide, a LinearSVC, a kind of support vector machine, is the most appropriate classifier choice.
 
-Support vector machines (SVMs) are a set of supervised learning methods used for classification, regression and outliers detection.
+Support vector machines (SVMs) are a set of supervised learning methods used for classification, regression and outliers detection. The objective of a Linear SVC (Support Vector Classifier) is to fit to the data you provide, returning a "best fit" hyperplane that divides, or categorizes, your data. From there, after getting the hyperplane, you can then feed some features to your classifier to see what the "predicted" class is. 
 
 The disadvantages of support vector machines include:
 
@@ -70,8 +70,50 @@ LinearSVC is similar to traditional C-Support Vector Classification (SVC) as it 
 
 This class supports both dense and sparse input and the multiclass support is handled according to a one-vs-the-rest scheme.
 
+--> SVC(kernel='linear') vs. LinearSVC
+The algorithm underlying LinearSVC is very sensitive to extreme values in its input. [http://stackoverflow.com/questions/20624353/why-cant-linearsvc-do-this-simple-classification]
+
 ###Model Hyperparameters
-Hyperparameters are model parameters set before the training process. "The underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.""
+Hyperparameters are model parameters set before the training process. In the case of LinearSVC, it takes the following hyperparameters:
+
+```
+class sklearn.svm.LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0.0001, C=1.0, multi_class='ovr', fit_intercept=True, intercept_scaling=1, class_weight=None, verbose=0, random_state=None, max_iter=1000)[source]¶
+```
+
+Of these, the following are relevant to this exercise:
+
+*C: Penalty parameter of the error term. A valuation of "how badly" you want to properly fit the data.
+--> Use C = 1.0
+
+*penalty: Specifies the norm used in the penalization. The ‘l2’ penalty is the standard used in SVC. The ‘l1’ leads to coef_ vectors that are sparse.
+--> Use penalty = 'l2'
+*loss: 
+*dual: Select the algorithm to either solve the dual or primal optimization problem. Prefer dual=False when n_samples > n_features.
+*tol: Tolerance for stopping criteria provided as float.
+
+*fit_intercept: Whether to calculate the intercept for this model. If set to false, no intercept will be used in calculations (i.e. data is expected to be already centered).
+*intercept_scaling
+*random_state
+*max_iter
+
+According to Scikit Learn, "parameters that are not directly learnt within estimators can be set by searching a parameter space for the best [cross-validation] score." The results of the grid search for the LinearSVC model for trial 1 (market data only) are presented below:
+
+```
+Performing Grid Search to tune hyperparameters ...
+
+Best Estimator:
+LinearSVC(C=0.27825594022071259, class_weight=None, dual=True,
+     fit_intercept=True, intercept_scaling=1, loss='squared_hinge',
+     max_iter=1000, multi_class='ovr', penalty='l2', random_state=None,
+     tol=0.0001, verbose=0)
+
+Best Parameters:
+{'C': 0.27825594022071259, 'class_weight': None}
+
+Best Score:
+0.745666666667
+```
+According to Scikit Learn, "[LinearSVC's] underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.""
 
 ###Solutions to Overfitting
 Evaluating the quality of the model on the data used to fit the model can lead to overfitting. The solution to this issue is twofold:

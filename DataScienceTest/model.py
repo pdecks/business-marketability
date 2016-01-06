@@ -29,18 +29,15 @@ import time
 
 from matplotlib import gridspec
 
-from sklearn.datasets import base as sk_base
 from sklearn.cross_validation import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.svm import LinearSVC
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import cross_val_score
+from sklearn.grid_search import GridSearchCV
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-from sklearn.pipeline import Pipeline
 from sklearn.externals import joblib
+from sklearn.preprocessing import scale
 
 
 
@@ -187,7 +184,7 @@ def score_kfolds(X, y, min_num_folds=2, max_num_folds=2, num_iter=1, num_feats=N
             # print "iteration: %d ..." % j
             i = 1
             for train, test in k_fold:
-                score = clf.fit_transform(X[train], y[train]).score(X[test], y[test])
+                score = clf.fit(X[train], y[train]).score(X[test], y[test])
                 y_predict = clf.predict(X[test])
                 accuracy = accuracy_score(y[test], y_predict)
                 precision = precision_score(y[test], y_predict)
@@ -416,17 +413,35 @@ def train_classifier():
     subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
 
     X = list_of_dicts_to_np(all_data, subfields)
+    # normalize the data before fitting
+    # X = scale(X)  # this had a neglible effect on the accuracy
     y = loads_labels_to_np(json_path, all_data, 'unique_id')
 
-    # min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
-    # fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
+    min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
+    fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
 
     clf = LinearSVC()
-    print "Performing Cross Validation with 10 folds ... "
+    
+    # CROSS VALIDATION
+    print "\nPerforming Cross Validation with 10 folds ... "
     scores = cross_val_score(clf, X, y, cv=10, scoring='accuracy')
-
     # Print mean score and the 95% confidence interval of the score estimate 
     print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
+    # GRID SEARCH
+    print "\nPerforming Grid Search to tune hyperparameters ..."
+    params_space = {'C': np.logspace(-5, 0, 10), 'class_weight':[None, 'auto']}
+    gscv = GridSearchCV(clf, params_space, cv=10, n_jobs=-1)
+    # train the model
+    gscv.fit(X, y)
+    # give a look at your best params combination and best score you have
+    print "Best Estimator:"
+    print gscv.best_estimator_
+    print "Best Parameters:"
+    print gscv.best_params_
+    print "Best Score:"
+    print gscv.best_score_
+
 
     # CREATE and TRAIN the classifier
     clf = LinearSVC().fit(X, y)
@@ -434,7 +449,7 @@ def train_classifier():
     # PERSIST THE MODEL / COMPONENTS
     items_to_pickle = [clf]
     pickling_paths = [pickle_path_SVC]
-    import pdb; pdb.set_trace()
+    
     to_persist(items_to_pickle=items_to_pickle, pickling_paths=pickling_paths)
 
     return
