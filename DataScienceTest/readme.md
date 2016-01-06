@@ -1,10 +1,13 @@
-# Understanding the Problem 
+#Understanding the Problem 
+This is a supervised learning exercise because we are supplied with target labels for the training dataset. Supervised learning can be further broken down into two categories, classification and regression. In classification, the label is discrete, while in regression, the label is continuous. Here, we have discrete labels that also happen to be binary values. Therefore, this exercise is a binary classification problem. 
+
+
+##Questions that arose when looking at the headers for the training data
 ```
 unique_id,city,state,contact_title,category,PRMKTS,EQMKTS,RAMKTS,MMKTS,has_facebook,has_twitter,degree_connected,revenue,headcount
 VYDAQRLK,New York,NY,Manager,Insurance,0.518403977655587,0.6246364292624702,0.5197196212855738,0.5542533427345436,True,False,2.0,3862000,262
 ```
 
-### Questions that arose when looking at the headers for the training data
 
 What do PRMKTS, EQMKTS, RAMKTS, and MMKTS stand for?
 How important is the location?
@@ -14,7 +17,7 @@ What value is the revenue in? Can look at relative values and disregard specific
 currency. What if this data isn't all in the same currency?
 Would using ALL of this information overfit the data? What is actually relevant?
 
-# Machine Learning Model
+#Machine Learning Model
 Often the hardest part of solving a machine learning problem can be finding the right estimator for the job, as different estimators are better suited for different types of data and different problems.
 
 The steps for supervised learning are:
@@ -36,7 +39,8 @@ There are tradeoffs between several characteristics of algorithms, such as:
 * Predictive accuracy on new data
 * Transparency or interpretability, meaning how easily you can understand the reasons an algorithm makes its predictions
 
-Because the target labels are binary values, this exercise is a binary classification problem. Some of the methods commonly used for binary classification are:
+Some of the methods commonly used for binary classification are:
+
 
 * Decision trees
 * Random forests
@@ -44,6 +48,8 @@ Because the target labels are binary values, this exercise is a binary classific
 * Support vector machines
 * Neural networks
 * Logistic regression
+
+##Model Selection
 
 Following the (#Scikit Learn Machine Learning Map)http://scikit-learn.org/stable/tutorial/machine_learning_map/,
 the data has more than 50 samples but less than 100k samples and we have target labels for the training data.
@@ -58,10 +64,39 @@ The disadvantages of support vector machines include:
 
 For this exercise, we have at most 12 features (one per column heading) and 3,000 samples, therefore we should expect this method to perform well.
 
-# Feature Selection
+Scikit Learn suggests that for optimal performance, one should use a C-ordered numpy.ndarray (dense).
 
+LinearSVC is similar to traditional C-Support Vector Classification (SVC) as it uses a linear kernel. In sklearn, LinearSVC is implemented in terms of liblinear rather than libsvm, so it has more flexibility in the choice of penalties and loss functions and **should scale better to large numbers of samples**. For traditional SVC, the fit time complexity is more than quadratic with the number of samples which makes it hard to scale to dataset with more than a few 10000 samples.
 
-# Analysis
+This class supports both dense and sparse input and the multiclass support is handled according to a one-vs-the-rest scheme.
+
+###Model Hyperparameters
+Hyperparameters are model parameters set before the training process. "The underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.""
+
+###Solutions to Overfitting
+Evaluating the quality of the model on the data used to fit the model can lead to overfitting. The solution to this issue is twofold:
+
+* Split your data into two sets to detect overfitting situations:
+one for training and model selection: the training set
+one for evaluation: the test set
+* Avoid overfitting by using simpler models (e.g. linear classifiers instead of gaussian kernel SVM) or by increasing the regularization parameter of the model if available (see the docstring of the model for details)
+* When the amount of labeled data available is small, it may not be feasible to construct training and test sets. In that case, you can choose to use k-fold cross validation: divide the dataset into k = 10 parts of (roughly) equal size, then for each of these ten parts, train the classifier on the other nine and test on the held-out part.
+
+* Bias and Variance http://www.astroml.org/sklearn_tutorial/practical.html#astro-biasvariance
+
+#Feature Selection
+Features are distinct traits that can be used to describe each business in a quantitative manner. In the case of CSV files, it is relatively straightforward to extract features, because the data is structured. An example of unstructured data would be a text document where the number of words varies
+Categorical features, such as the business' location, have no obvious numerical representation but can easily be converted
+to a numerical feature. For each distinct location, we can create a new feature that can be valued to 1.0 if the category is matching or 0.0 if not.
+
+Example:
+Feature 1: "New York, NY"
+Feature 2: "Denver, CO"
+
+How many cities are in the dataset?
+Should we just use states? Or maybe clusters of cities (metro areas)? By city population?
+
+#Analysis
 
 
 
