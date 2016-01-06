@@ -96,6 +96,8 @@ Feature 2: "Denver, CO"
 How many cities are in the dataset?
 Should we just use states? Or maybe clusters of cities (metro areas)? By city population?
 
+##Chi-Square Test
+
 #Analysis
 
 
