@@ -1,22 +1,12 @@
-"""Supervised Machine Learning Exercise: Predicting a Business' Marketability"""
+"""Supervised Machine Learning Exercise: Predicting a Business' Marketability
 
-"""
-Performing NLP using scikit-learn and NLTK.
+by Patricia Decker, 1/6/2016
 
-by Patricia Decker, 11/2015, Hackbright Academy Independent Project
+Objectives:
+1. Featurize training data
+2. Train a model
+3. Use the model to predict business marketability
 
-1. Classify Document Category
-LinearSVC classifier that takes features vectors consisting of tokenized
-reviews that have been converted to numerical values (counts) and
-transformed to account for term frequency and inverse document frequency
-(tf-idf). Tested on toy data set: 45 hand-labeled reviews that, for the
-most part, already contain the word 'gluten'.
-
-2. Perform Sentiment Analysis on Business review
-Use NLTK on full-review text to target sentences related to category of
-interest and assess sentiment of those target sentences. Generates a
-sentiment score for the category based on a probability from 0.0 to 1.0,
-where 1.0 is good and 0.0 is bad.
 """
 
 import random
@@ -130,19 +120,6 @@ def loads_labels_to_np(filepath, list_of_dicts, id_field):
     return np.array(y)
 
 
-# ## CREATE AND TRAIN CLASSIFIER ##
-# def create_train_classifier(X, y):
-#     """Takes business features (X) and targets (y), both np arrays, and returns
-#     a trained classifier."""
-
-#     ## CLASSIFIER ##
-#     # Linear SVC, recommended by sklearn machine learning map
-#     # clf = Classifier().fit(features_matrix, targets_vector)
-#     clf = LinearSVC().fit_transform(X, y)
-
-#     return clf
-
-
 ## SCORE THE CLASSIFIER OVER K-Folds ##
 # add number of features ...
 
@@ -217,7 +194,6 @@ def score_kfolds(X, y, min_num_folds=2, max_num_folds=2, num_iter=1, num_feats=N
     return (avg_scores, all_avg_scores)
 
 
-
 ## PERSIST A COMPONENT OF THE MODEL ##
 def to_persist(items_to_pickle=None, pickling_paths=None):
     """
@@ -238,15 +214,6 @@ def to_persist(items_to_pickle=None, pickling_paths=None):
     print "Persistance complete."
     return
 
-
-# def persist_component(component, pickle_path):
-#     """Use joblib to pickle the individual classifier components"""
-#     joblib.dump(component, pickle_path)
-#     print 'Component %s pickled to directory: %s' % (str(component), pickle_path)
-#     print
-#     return
-
-
 ## REVIVE COMPONENT ##
 def revives_component(pickle_path):
     """Takes the name of the pickled object and returns the revived model.
@@ -257,42 +224,9 @@ def revives_component(pickle_path):
     return component_clone
 
 
-# ## CLASSIFY NEW REVIEW
-# def categorizes_review(review_text, count_vect, tfidf_transformer, clf):
-#     """Takes an array containing review text and returns the most relevant
-#     category for the review.
-
-#     new_doc_test = ['This restaurant has gluten-free foods.']
-#     new_doc_cv = count_vect.transform(new_doc_test)
-#     new_doc_tfidf = tfidf_transformer.transform(new_doc_cv)
-#     new_doc_category = clf_revive.predict(new_doc_tfidf)
-#     print "%s => %s" % (new_doc_test[0], categories[new_doc_category[0]])
-#     """
-
-#     # TODO: decide if it is necessary to continually pickle/unpickle every time
-#     # the classifier is used
-
-#     # TODO: unpickle classifier
-#     # clf_revive = revives_model(pdecks_trained_classifier)
-
-#     text_to_classify = review_text
-#     text_to_classify_counts = count_vect.transform(text_to_classify)
-#     text_to_classify_tfidf = tfidf_transformer.transform(text_to_classify_counts)
-#     new_doc_category = clf.predict(text_to_classify_tfidf)
-
-#     # TODO: pickle classifier
-#     # pdecks_trained_classifier = pickles_model(clf_revive)
-
-#     return new_doc_category
-
-
-# def get_category_name(category_id):
-#     """Takes a category index and returns a category name."""
-#     return categories[category_id]
-
-
-# ## FEATURE EXTRACTION ##
-
+## TODO: FEATURE EXTRACTION IMPROVEMENT USING CHI-SQUARE ##
+## The following code was from my Hackbright project but was not updated for
+## this application
 # def sorted_features (feature_names, X_numerical, y, kBest=None):
 #     """
 #     Use chi-square test scores to select top N features from vectorizer.

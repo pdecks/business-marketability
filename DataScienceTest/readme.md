@@ -74,33 +74,22 @@ This class supports both dense and sparse input and the multiclass support is ha
 The algorithm underlying LinearSVC is very sensitive to extreme values in its input. [http://stackoverflow.com/questions/20624353/why-cant-linearsvc-do-this-simple-classification]
 
 ###Model Hyperparameters
-Hyperparameters are model parameters set before the training process. In the case of LinearSVC, it takes the following hyperparameters:
+Hyperparameters are model parameters set before the training process. According to Scikit Learn, "parameters that are not directly learnt within estimators can be set by searching a parameter space for the best [cross-validation] score." We can tune hyperparameters using the built-in function Grid Search [http://scikit-learn.org/stable/modules/grid_search.html#grid-search]. 
+
+In the case of LinearSVC, it takes the following hyperparameters:
 
 ```
 class sklearn.svm.LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0.0001, C=1.0, multi_class='ovr', fit_intercept=True, intercept_scaling=1, class_weight=None, verbose=0, random_state=None, max_iter=1000)[source]¶
 ```
 
-Of these, the following are relevant to this exercise:
+Of these, the following is relevant to this exercise:
 
 *C: Penalty parameter of the error term. A valuation of "how badly" you want to properly fit the data.
---> Use C = 1.0
+reference: [http://stats.stackexchange.com/questions/31066/what-is-the-influence-of-c-in-svms-with-linear-kernel]
 
-*penalty: Specifies the norm used in the penalization. The ‘l2’ penalty is the standard used in SVC. The ‘l1’ leads to coef_ vectors that are sparse.
---> Use penalty = 'l2'
-*loss: 
-*dual: Select the algorithm to either solve the dual or primal optimization problem. Prefer dual=False when n_samples > n_features.
-*tol: Tolerance for stopping criteria provided as float.
-
-*fit_intercept: Whether to calculate the intercept for this model. If set to false, no intercept will be used in calculations (i.e. data is expected to be already centered).
-*intercept_scaling
-*random_state
-*max_iter
-
-According to Scikit Learn, "parameters that are not directly learnt within estimators can be set by searching a parameter space for the best [cross-validation] score." The results of the grid search for the LinearSVC model for trial 1 (market data only) are presented below:
+The results of the grid search for the LinearSVC model for trial 1 (market data only) are presented below:
 
 ```
-Performing Grid Search to tune hyperparameters ...
-
 Best Estimator:
 LinearSVC(C=0.27825594022071259, class_weight=None, dual=True,
      fit_intercept=True, intercept_scaling=1, loss='squared_hinge',
@@ -113,6 +102,9 @@ Best Parameters:
 Best Score:
 0.745666666667
 ```
+
+This accuracy score is essentially unchanged from the LinearSVC model with C=1.0. (It looks like this model doesn't perform very well for this data?)
+
 According to Scikit Learn, "[LinearSVC's] underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.""
 
 ###Solutions to Overfitting
