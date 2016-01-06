@@ -23,6 +23,9 @@ import random
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import json
+import time
 
 from matplotlib import gridspec
 
@@ -39,16 +42,10 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.pipeline import Pipeline
 from sklearn.externals import joblib
 
-import csv
-import json
 
-## DIRECTORIES FOR PICKLING CLASSIFIER & COMPONENTS ##########################
 
+## DIRECTORY FOR PICKLING CLASSIFIER 
 pickle_path_SVC = 'classifiers/LinearSVC/linearSVC.pkl'
-pickle_path_v = 'classifiers/LSVCcomponents/vectorizer/linearSVCvectorizer.pkl'
-pickle_path_t = 'classifiers/LSVCcomponents/transformer/linearSVCtransformer.pkl'
-pickle_path_c = 'classifiers/LSVCcomponents/classifier/linearSVCclassifier.pkl'
-
 
 ## LOAD DATA
 def loads_data(filepath):
@@ -136,212 +133,113 @@ def loads_labels_to_np(filepath, list_of_dicts, id_field):
     return np.array(y)
 
 
-# define filepaths
-train_path = 'data/DS_train.csv'
-json_path = 'data/DS_train_labels.json'
-
-# load the data
-all_data, fieldnames = loads_data(train_path)
-
-# create np arrays for training data and target labels
-subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
-X = list_of_dicts_to_np(all_data, subfields)
-y = loads_labels_to_np(json_path, all_data, 'unique_id')
-
-# def create_vectorizer(X_train):
-#     """Returns a sklearn vectorizer fit to training data.
-
-#     Input is a numpy array of training data."""
-#     # create an instance of CountVectorize feature extractor
-#     # using ngram_range flag, enable bigrams in addition to single words
-#     count_vect = CountVectorizer(ngram_range=(1, 2))
-#     # extract features from training documents' data
-#     X_train_counts = count_vect.fit_transform(X_train)
-
-#     return count_vect
-
-
-# def create_transformer(X_train_counts):
-#     """Returns a sklearn transformer fit to training data.
-
-#     Input is a numpy array of training data feature counts."""
-#     # create an instance of TfidTransformer that performs both tf & idf
-#     tfidf_transformer = TfidfTransformer()
-#     X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
-
-#     return tfidf_transformer
-
-
 # ## CREATE AND TRAIN CLASSIFIER ##
 # def create_train_classifier(X, y):
-#     """Takes documents (X) and targets (y), both np arrays, and returns a trained
-#     classifier and its vectorizer and transformer."""
-
-#     X_train = np.copy(X)
-#     y_train = np.copy(y)
-
-#     ## EXTRACTING FEATURES ##
-#     # TOKENIZATION
-#     count_vect = create_vectorizer(X_train)
-#     X_train_counts = count_vect.transform(X_train)
-
-#     ## TF-IDF ##
-#     tfidf_transformer = create_transformer(X_train_counts)
-#     X_train_tfidf = tfidf_transformer.transform(X_train_counts)
-
+#     """Takes business features (X) and targets (y), both np arrays, and returns
+#     a trained classifier."""
 
 #     ## CLASSIFIER ##
 #     # Linear SVC, recommended by sklearn machine learning map
 #     # clf = Classifier().fit(features_matrix, targets_vector)
-#     clf = LinearSVC().fit(X_train_tfidf, y_train)
+#     clf = LinearSVC().fit_transform(X, y)
 
-#     ## CREATING PIPELINES FOR CLASSIFIERS #
-#     # Pipeline([(vectorizer), (transformer), (classifier)])
-#     pipeline_clf = Pipeline([('vect', CountVectorizer(ngram_range=(1, 2))),
-#                          ('tfidf', TfidfTransformer()),
-#                          ('clf', LinearSVC()),
-#                         ])
-#     # train the pipeline
-#     pipeline_clf = pipeline_clf.fit(X_train, y_train)
+#     return clf
 
 
-#     return (count_vect, tfidf_transformer, clf, pipeline_clf)
+## SCORE THE CLASSIFIER OVER K-Folds ##
+# add number of features ...
+
+def score_kfolds(X, y, min_num_folds=2, max_num_folds=2, num_iter=1, num_feats=None):
+    """Performs cross-validation and returns a dictionary of the scores by fold.
+
+    X should be a dense matrix, otherwise it needs to be transformed.
+    """
+    clf = LinearSVC()
+
+    if num_feats:
+        print "Number of features:", num_feats
+        print
+    print "Running score_kfolds with min_num_folds=%d, max_num_folds=%d, num_iter=%d" % (min_num_folds, max_num_folds, num_iter)
+    print "..."
+    start = time.time()
+    # randomly partition data set into 10 folds ignoring the classification variable
+    # b/c we want to see how the classifier performs in this real-world situation
+
+    # start with k=2, eventually increase to k=10 with larger dataset
+    avg_scores = {}
+    all_avg_scores = {}
+    for k in range(min_num_folds, max_num_folds + 1):
+        avg_scores[k] = {}
+        all_avg_scores[k] = {}
+    for k in range(min_num_folds, max_num_folds + 1):
+        n_fold = k
+        print "Fold number %d ..." % k
+        # run k_fold num_iter number of times at each value of k (2, 3, ..., k)
+        # take average score for each fold, keeping track of scores in dictionary
+        k_dict = {}
+        all_scores = {}
+        for i in range(1, n_fold + 1):
+            k_dict[i] = []
+            all_scores[i] = []
+        #
+        for j in range(1, num_iter +1):
+            k_fold = KFold(n=X.shape[0], n_folds=n_fold, shuffle=True, random_state=random.randint(1,101))
+            # print "iteration: %d ..." % j
+            i = 1
+            for train, test in k_fold:
+                score = clf.fit_transform(X[train], y[train]).score(X[test], y[test])
+                y_predict = clf.predict(X[test])
+                accuracy = accuracy_score(y[test], y_predict)
+                precision = precision_score(y[test], y_predict)
+                recall = recall_score(y[test], y_predict)
+                all_scores[i].append((accuracy, precision, recall))
+                k_dict[i].append(score)
+                # print "Fold: {} | Score:  {:.4f}".format(i, score)
+                # k_fold_scores = np.append(k_fold_scores, score)
+                i += 1
+        #
+        avg_scores[k] = k_dict
+        all_avg_scores[k] = all_scores
+        #
+        print "Iterations for fold %d complete." % k
+    #
+    print '\n-- K-Fold Cross Validation --------'
+    print '-- Mean Scores for {} Iterations --\n'.format(j)
+    for k in range(min_num_folds, max_num_folds + 1):
+      print '-- k = {} --'.format(k)
+      for i in range(1, k+1):
+        print 'Fold: {} | Mean Score: {}'.format(i, np.array(avg_scores[k][i]).mean())
+        if num_iter > 0:
+            print 'Fold: {} | Mean Accuracy Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 0].A1))
+            print 'Fold: {} | Mean Precision Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 1].A1))
+            print 'Fold: {} | Mean Recall Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 2].A1))
+    #
+    endtime = time.time()
+    elapsed = endtime - start
+    print "\nAnalysis completed in", elapsed
+    return (avg_scores, all_avg_scores)
 
 
-# ## SCORE THE CLASSIFIER OVER K-Folds ##
-# # add number of features ...
 
-# def score_kfolds(X, y, min_num_folds=2, max_num_folds=2, num_iter=1, atype=None, num_feats=None):
-#     """Perform cross-validation on sparse matrix (tf-idf).
+## PERSIST A COMPONENT OF THE MODEL ##
+def to_persist(items_to_pickle=None, pickling_paths=None):
+    """
+    Takes a list of components to pickle and a list of paths for each item
+    to be pickled.
+    """
+    import pdb; pdb.set_trace()
+    if items_to_pickle and pickling_paths and len(items_to_pickle) == len(pickling_paths):
+        for item, path in zip(items_to_pickle, pickling_paths):
 
-#     Returns a dictionary of the scores by fold.
-#     atype: if "sentiment", cross-validate sentiment analysis model
-#            which assumes the input X is already transformed into a
-#            sparse matrix of tf-idf values. if None, assumes X needs
-#            to first be vectorized.
+            decision = raw_input("Would you like to persist %s?\nPath: %s\n(Y) or (N) >>"  % (str(item), str(path)))
+            if decision.lower() == 'y':
+                persist_component(item, path)
+            else:
+                print '%s not pickled.' % (str(item))
+                print
 
-#     """
-#     if atype is None:
-#         count_vect = create_vectorizer(X)
-#         X_counts = count_vect.transform(X)
-
-#         tfidf_transformer = create_transformer(X_counts)
-#         X_tfidf = tfidf_transformer.transform(X_counts)
-#     else:
-#         X_tfidf = X
-
-#     if atype == 'stars':
-#         clf = LinearSVC()
-#     else:
-#         clf = LinearSVC()
-
-#     if num_feats:
-#         print "Number of features:", num_feats
-#         print
-#     print "Running score_kfolds with min_num_folds=%d, max_num_folds=%d, num_iter=%d" % (min_num_folds, max_num_folds, num_iter)
-#     print "..."
-#     start = time.time()
-#     # randomly partition data set into 10 folds ignoring the classification variable
-#     # b/c we want to see how the classifier performs in this real-world situation
-
-#     # start with k=2, eventually increase to k=10 with larger dataset
-#     avg_scores = {}
-#     all_avg_scores = {}
-#     for k in range(min_num_folds, max_num_folds + 1):
-#         avg_scores[k] = {}
-#         all_avg_scores[k] = {}
-#     for k in range(min_num_folds, max_num_folds + 1):
-#         n_fold = k
-#         print "Fold number %d ..." % k
-#         # run k_fold num_iter number of times at each value of k (2, 3, ..., k)
-#         # take average score for each fold, keeping track of scores in dictionary
-#         k_dict = {}
-#         all_scores = {}
-#         for i in range(1, n_fold + 1):
-#             k_dict[i] = []
-#             all_scores[i] = []
-#         #
-#         for j in range(1, num_iter +1):
-#             k_fold = KFold(n=X_tfidf.shape[0], n_folds=n_fold, shuffle=True, random_state=random.randint(1,101))
-#             # print "iteration: %d ..." % j
-#             i = 1
-#             for train, test in k_fold:
-#                 score = clf.fit(X_tfidf[train], y[train]).score(X_tfidf[test], y[test])
-#                 y_predict = clf.predict(X_tfidf[test])
-#                 accuracy = accuracy_score(y[test], y_predict)
-#                 precision = precision_score(y[test], y_predict)
-#                 recall = recall_score(y[test], y_predict)
-#                 all_scores[i].append((accuracy, precision, recall))
-#                 k_dict[i].append(score)
-#                 # print "Fold: {} | Score:  {:.4f}".format(i, score)
-#                 # k_fold_scores = np.append(k_fold_scores, score)
-#                 i += 1
-#         #
-#         avg_scores[k] = k_dict
-#         all_avg_scores[k] = all_scores
-#         #
-#         print "Iterations for fold %d complete." % k
-#     #
-#     print '\n-- K-Fold Cross Validation --------'
-#     print '-- Mean Scores for {} Iterations --\n'.format(j)
-#     for k in range(min_num_folds, max_num_folds + 1):
-#       print '-- k = {} --'.format(k)
-#       for i in range(1, k+1):
-#         print 'Fold: {} | Mean Score: {}'.format(i, np.array(avg_scores[k][i]).mean())
-#         if num_iter > 0:
-#             print 'Fold: {} | Mean Accuracy Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 0].A1))
-#             print 'Fold: {} | Mean Precision Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 1].A1))
-#             print 'Fold: {} | Mean Recall Score: {}'.format(i, np.mean(np.matrix(all_avg_scores[k][i])[:, 2].A1))
-#     #
-#     endtime = time.time()
-#     elapsed = endtime - start
-#     print "\nAnalysis completed in", elapsed
-#     return (avg_scores, all_avg_scores)
-
-
-# def tunes_parameters(X, y, n_fold=2):
-#     """Perform cross-validation on sparse matrix (tf-idf).
-
-#     Returns a dictionary of the scores by fold."""
-
-#     count_vect = create_vectorizer(X)
-#     X_counts = count_vect.transform(X)
-
-#     tfidf_transformer = create_transformer(X_counts)
-#     X_tfidf = tfidf_transformer.transform(X_counts)
-
-#     clf = LinearSVC()
-
-#     k_fold = KFold(n=len(X), n_folds=n_fold, shuffle=True, random_state=random.randint(1,101))
-
-#     # pass the entirity of the data, X_tfidf, to cross_val_score
-#     # cv is the number of folds for cross-validation
-#     # use classification accuracy as deciding metric
-#     scores = cross_val_score(clf, X_tfidf, y, cv=10, scoring='accuracy')
-#     print scores
-
-#     return scores
-
-
-# ## PERSIST A COMPONENT OF THE MODEL ##
-# def to_persist(items_to_pickle=None, pickling_paths=None):
-#     """
-#     Takes a list of components to pickle and a list of paths for each item
-#     to be pickled.
-#     """
-#     # todo: check pipeline case...
-#     if items_to_pickle and pickling_paths and len(items_to_pickle) == len(pickling_paths):
-#         for item, path in zip(items_to_pickle, pickling_paths):
-
-#             decision = raw_input("Would you like to persist %s?\nPath: %s\n(Y) or (N) >>"  % (str(item), str(path)))
-#             if decision.lower() == 'y':
-#                 persist_component(item, path)
-#             else:
-#                 print '%s not pickled.' % (str(item))
-#                 print
-
-#     print "Persistance complete."
-#     return
+    print "Persistance complete."
+    return
 
 
 # def persist_component(component, pickle_path):
@@ -352,14 +250,14 @@ y = loads_labels_to_np(json_path, all_data, 'unique_id')
 #     return
 
 
-# ## REVIVE COMPONENT ##
-# def revives_component(pickle_path):
-#     """Takes the name of the pickled object and returns the revived model.
+## REVIVE COMPONENT ##
+def revives_component(pickle_path):
+    """Takes the name of the pickled object and returns the revived model.
 
-#     ex: clf_revive = pickle.loads(pdecks_trained_classifier)
-#     """
-#     component_clone = joblib.load(pickle_path)
-#     return component_clone
+    ex: clf_revive = pickle.loads(pdecks_trained_classifier)
+    """
+    component_clone = joblib.load(pickle_path)
+    return component_clone
 
 
 # ## CLASSIFY NEW REVIEW
@@ -452,105 +350,105 @@ y = loads_labels_to_np(json_path, all_data, 'unique_id')
 #     return top_ranked_feature_names
 
 
-# def represents_int(s):
-#     """Helper function for checking if input string represents an int"""
-#     try:
-#         int(s)
-#         return True
-#     except ValueError:
-#         return False
+def represents_int(s):
+    """Helper function for checking if input string represents an int"""
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
 
 
-# def get_folds_and_iter():
-#     """
-#     Prompt the user for number of Kfolds (min and max) and iterations
+def get_folds_and_iter():
+    """
+    Prompt the user for number of Kfolds (min and max) and iterations
 
-#     This information is passed to score_kfolds
-#     """
+    This information is passed to score_kfolds
+    """
 
-#     # cross-validate
-#     # minimum K
-#     min_num_folds = raw_input("Enter a minimum number of folds (2-10): ")
-#     while not represents_int(min_num_folds):
-#         min_num_folds = raw_input("Enter a number of folds (2-10): ")
-#         print
-#     min_num_folds = int(min_num_folds)
+    # cross-validate
+    # minimum K
+    min_num_folds = raw_input("Enter a minimum number of folds (2-10): ")
+    while not represents_int(min_num_folds):
+        min_num_folds = raw_input("Enter a number of folds (2-10): ")
+        print
+    min_num_folds = int(min_num_folds)
 
-#     # maximum K
-#     if int(min_num_folds) != 10:
-#         max_num_folds = raw_input("Enter a maximum number of folds (%d-10): " % int(min_num_folds))
-#         while not represents_int(max_num_folds) or int(max_num_folds) < min_num_folds:
-#             max_num_folds = raw_input("Enter a maximum number of folds (%d-10): " % int(min_num_folds))
-#             print
-#     else:
-#         max_num_folds = 10
+    # maximum K
+    if int(min_num_folds) != 10:
+        max_num_folds = raw_input("Enter a maximum number of folds (%d-10): " % int(min_num_folds))
+        while not represents_int(max_num_folds) or int(max_num_folds) < min_num_folds:
+            max_num_folds = raw_input("Enter a maximum number of folds (%d-10): " % int(min_num_folds))
+            print
+    else:
+        max_num_folds = 10
 
-#     # number of iterations
-#     num_iter = raw_input("Enter a number of iterations (1-50): ")
-#     print
+    # number of iterations
+    num_iter = raw_input("Enter a number of iterations (1-50): ")
+    print
 
-#     while not represents_int(num_iter):
-#         num_iter = raw_input("Enter a number of iterations (1-50): ")
-#         print
-
-
-#     max_num_folds = int(max_num_folds)
-#     num_iter = int(num_iter)
-
-#     return (min_num_folds, max_num_folds, num_iter)
+    while not represents_int(num_iter):
+        num_iter = raw_input("Enter a number of iterations (1-50): ")
+        print
 
 
-# def train_classifier():
-#     """SUPERCEDED by multilabel classifier
-#     Trains the classifier on the labeled yelp data.
+    max_num_folds = int(max_num_folds)
+    num_iter = int(num_iter)
 
-#     Tests the classifier pipeline on a "new doc".
-
-#     Provides opportunities to persist the trained model and/or its components
-#     """
-#     # LOAD the training documents
-#     # documents = loads_pdecks_reviews(container_path, categories)
-#     documents = loads_yelp_reviews(container_path, categories)
-#     X, y = bunch_to_np(documents)
-
-#     min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
-#     fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
-
-#     scores = tunes_parameters(X, y, 10)
-
-#     # CREATE and TRAIN the classifier PIPELINE
-#     X, y = bunch_to_np(documents)
-#     count_vect, tfidf_transformer, clf, pipeline_clf = create_train_classifier(X, y)
-
-#     # TEST the classifier
-#     new_doc = ['I love gluten-free foods. This restaurant is the best.']
-#     new_doc_category_id_pipeline = pipeline_clf.predict(new_doc)
-#     new_doc_category_pipeline = get_category_name(new_doc_category_id_pipeline)
-
-#     print
-#     print "-- Test document --"
-#     print
-#     print "Using Pipeline:"
-#     print "%r => %s" % (new_doc[0], new_doc_category_pipeline)
-
-#     # PERSIST THE MODEL / COMPONENTS
-#     items_to_pickle = [pipeline_clf, count_vect, tfidf_transformer, clf]
-#     pickling_paths = [pickle_path_SVC, pickle_path_v, pickle_path_t, pickle_path_c]
-#     to_persist(items_to_pickle=items_to_pickle, pickling_paths=pickling_paths)
-
-#     return
+    return (min_num_folds, max_num_folds, num_iter)
 
 
+def train_classifier():
+    """Trains the classifier on the labeled data.
+
+    Provides opportunities to persist the trained model and/or its components
+    """
+
+    # define filepaths
+    train_path = 'data/DS_train.csv'
+    json_path = 'data/DS_train_labels.json'
+
+    # load the data
+    all_data, fieldnames = loads_data(train_path)
+
+    # create np arrays for training data and target labels
+    # Trial 1: Numerical Data Only
+    subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
+
+    X = list_of_dicts_to_np(all_data, subfields)
+    y = loads_labels_to_np(json_path, all_data, 'unique_id')
+
+    # min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
+    # fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
+
+    clf = LinearSVC()
+    print "Performing Cross Validation with 10 folds ... "
+    scores = cross_val_score(clf, X, y, cv=10, scoring='accuracy')
+
+    # Print mean score and the 95% confidence interval of the score estimate 
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
+    # CREATE and TRAIN the classifier
+    clf = LinearSVC().fit(X, y)
+
+    # PERSIST THE MODEL / COMPONENTS
+    items_to_pickle = [clf]
+    pickling_paths = [pickle_path_SVC]
+    import pdb; pdb.set_trace()
+    to_persist(items_to_pickle=items_to_pickle, pickling_paths=pickling_paths)
+
+    return
 
 
 
-# if __name__ == "__main__":
 
-#     ## TRAIN AND PERSIST CLASSIFIER 
-#     print '\n--SUPERCEDED CLASSIFIERS--'
-#     to_train = raw_input("Train the LinearSVC classifier for categorization? Y or N >> ")
-#     if to_train.lower() == 'y':
-#         train_classifier()
+
+if __name__ == "__main__":
+
+    ## TRAIN AND PERSIST CLASSIFIER 
+    to_train = raw_input("Train the LinearSVC classifier for categorization? Y or N >> ")
+    if to_train.lower() == 'y':
+        train_classifier()
 
 #     ## CHECK PERFORMANCE OF PICKLED CLASSIFIER ON DATA SET
 #     else:

@@ -80,7 +80,16 @@ Evaluating the quality of the model on the data used to fit the model can lead t
 one for training and model selection: the training set
 one for evaluation: the test set
 * Avoid overfitting by using simpler models (e.g. linear classifiers instead of gaussian kernel SVM) or by increasing the regularization parameter of the model if available (see the docstring of the model for details)
-* When the amount of labeled data available is small, it may not be feasible to construct training and test sets. In that case, you can choose to use k-fold cross validation: divide the dataset into k = 10 parts of (roughly) equal size, then for each of these ten parts, train the classifier on the other nine and test on the held-out part.
+* When the amount of labeled data available is small, it may not be feasible to construct training and test sets. In that case, you can choose to use k-fold cross validation: divide the dataset into k = 10 parts of (roughly) equal size, then for each of these ten parts, train the classifier on the other nine and test on the held-out part
+
+####sklearn.cross_validation.cross_val_score
+Built in helper function
+
+Using LinearSVC with default hyperparameters and using cross_val_score with 10 folds:
+```
+>>> print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+Accuracy: 0.75 (+/- 0.01)
+```
 
 * Bias and Variance http://www.astroml.org/sklearn_tutorial/practical.html#astro-biasvariance
 
@@ -96,9 +105,17 @@ Feature 2: "Denver, CO"
 How many cities are in the dataset?
 Should we just use states? Or maybe clusters of cities (metro areas)? By city population?
 
+## Trial 1:
+Using only market values: ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
+
+The advantage of starting with numerical values is that it was straightforward to create a features matrix for all of the samples, given that the LinearSVC model is expecting numerical input.
+
 ##Chi-Square Test
 
 #Analysis
 
+
+#Future Studies
+Using sklearn's DictVectorizer, which is used to convert feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. http://scikit-learn.org/stable/modules/feature_extraction.html
 
 
