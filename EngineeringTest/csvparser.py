@@ -8,12 +8,32 @@ class.
 rmation for each of the columns in the CSV file
 
 >>> chau,30,94110
-“String”, “Numeric”, “Numeric”
+"String", "Numeric", "Numeric"
+
+Edge case: '94110' should return a string
 """
 
-# import numpy as numpy
 import os
 import sys
+import re
+
+# Regular Expression for handling commas in strings
+csv_pat = re.compile(r"""
+    \s*                # Any whitespace.
+    (                  # Start capturing here.
+      [^,"']+?         # Either a series of non-comma non-quote characters.
+      |                # OR
+      "(?:             # A double-quote followed by a string of characters...
+          [^"\\]|\\.   # That are either non-quotes or escaped...
+       )*              # ...repeated any number of times.
+      "                # Followed by a closing double-quote.
+      |                # OR
+      '(?:[^'\\]|\\.)*'# Same as above, for single quotes.
+    )                  # Done capturing.
+    \s*                # Allow arbitrary space before the comma.
+    (?:,|$)            # Followed by a comma or the end of a string.
+    """, re.VERBOSE)
+
 
 class CSVParse(object):
     """Open CSV file(s) and store info using lists or numpy arrays.
@@ -30,7 +50,7 @@ class CSVParse(object):
     def __init__(self, filepath, skip_rows=0):
         self.skip_rows = skip_rows
         self.filepath = str(filepath)
-        self.csv_files = []
+        self.csv_files = []  # for storing filenames
 
         # change current working directory to filepath
         os.chdir(self.filepath)
@@ -41,6 +61,68 @@ class CSVParse(object):
             if file.endswith(suffix):
                 self.csv_files.append(file)
 
-        # create array for storing all data from all files in directory
-        self.all_data = [0] * len(self.csv_files)
+        # create dictionary for storing all data from all files in directory
+        self.all_data = {}
+        self.all_types = {}
 
+        return
+
+
+    def read(self):
+        """Reads all files in folder into memory."""
+
+        # self.filenames = {}    
+
+        for filename in self.csv_files:
+            print "FILE:", filename
+            # Read CSV
+            self.curr_data = [line.rstrip('\n').rstrip('\r') for line in open(filename, 'rb')]
+            self.clean_data = [csv_pat.findall(item) for item in self.curr_data]
+            # clean off extra quotations surrounding strings with commas
+            for row in self.clean_data:
+                for i, item in enumerate(row):
+                    if '"' in item:
+                        row[i] = item.strip('"')
+                    if "'" in item:
+                        row[i] = item.strip("'")
+            # add current clean data to dictionary by filename
+            self.all_data[filename] = self.clean_data
+
+        return
+
+
+    def types(self, filename):
+        """Return the data type information for all cells in a file."""
+        types_by_row = []
+        for j, row in enumerate(self.all_data[filename]):
+            curr_row = 'List('
+            for i, item in enumerate(row):
+                if item.isdigit():
+                    curr_row += '"Numeric",'
+                else:
+                    curr_row += '"String",'
+                if i == len(row) - 1:
+                    curr_row = curr_row[:-1]
+                    curr_row += ')'
+            print "ROW %d: %s" % (j, curr_row)
+            types_by_row.append(curr_row)
+        
+        # add types to dictionary
+        self.all_types[filename] = types_by_row
+        
+        return
+
+if __name__ == "__main__":
+    my_dir = "."
+
+    print "Creating CSV Parser for files in %s ..." % os.path.abspath(my_dir)
+    CSV_reader = CSVParse(my_dir)
+
+    print
+    print "Reading files in current working directory ..."
+    CSV_reader.read()
+
+    my_file = 'example.csv'
+    print
+    print "Reading data type information for file %s ..." % my_file
+    CSV_reader.types(my_file)
