@@ -92,10 +92,10 @@ def list_of_dicts_to_np(list_of_dicts, fieldnames=None, fieldtypes=None, dictvec
         raise ValueError('list_of_dicts must not be an empty list')
 
     # set default field subset
-    if not fieldnames and list_of_dicts:
+    if not fieldnames and not fieldtypes and list_of_dicts:
         fieldnames = list_of_dicts[0].keys()
         fieldtypes = [type(x) for x in row]
-
+    import pdb; pdb.set_trace()
     # TODO: determine size of matrix to create if not all types are numerical or boolean
     if str in fieldtypes:
         pass 
@@ -119,7 +119,7 @@ def list_of_dicts_to_np(list_of_dicts, fieldnames=None, fieldtypes=None, dictvec
                 else:
                     X[i, j] = list_of_dicts[i][field]
 
-    import pdb; pdb.set_trace()
+    
     return X
 
 
@@ -429,6 +429,7 @@ def train_classifier():
 
 
 if __name__ == "__main__":
+    ## TODO: fix datatypes (convert strings to floats)
 
     ## TRAIN AND PERSIST CLASSIFIER 
     to_train = raw_input("Train the LinearSVC classifier for categorization? Y or N >> ")
