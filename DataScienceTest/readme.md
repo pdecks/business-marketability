@@ -1,6 +1,16 @@
 #Understanding the Problem 
 This is a supervised learning exercise because we are supplied with targets for the training dataset. Supervised learning can be further broken down into two categories, classification and regression. In classification, the label is discrete, while in regression, the label is continuous. Here, we have discrete labels that also happen to be binary values. Therefore, this exercise is a binary classification problem. 
 
+The steps for supervised learning are:
+
+* Prepare Data
+* Choose an Algorithm
+* Fit a Model
+* Choose a Validation Method
+* Examine Fit and Update Until Satisfied
+* Use Fitted Model for Predictions
+
+#Prepare Data
 
 ##Questions that arose when looking at the headers for the training data
 ```
@@ -17,20 +27,8 @@ What value is the revenue in? Can look at relative values and disregard specific
 currency. What if this data isn't all in the same currency?
 Would using ALL of this information overfit the data? What is actually relevant?
 
-#Machine Learning Model
+#Choose an Algorithm
 Often the hardest part of solving a machine learning problem can be finding the right estimator for the job, as different estimators are better suited for different types of data and different problems.
-
-The steps for supervised learning are:
-
-* Prepare Data
-* Choose an Algorithm
-* Fit a Model
-* Choose a Validation Method
-* Examine Fit and Update Until Satisfied
-* Use Fitted Model for Predictions
-
-For regression, Y must be a numeric vector with the same number of elements as the number of rows of X.
-For classification, Y can be any of these data types. This table also contains the method of including missing entries.
 
 There are tradeoffs between several characteristics of algorithms, such as:
 
@@ -41,7 +39,6 @@ There are tradeoffs between several characteristics of algorithms, such as:
 
 Some of the methods commonly used for binary classification are:
 
-
 * Decision trees
 * Random forests
 * Bayesian networks
@@ -51,7 +48,7 @@ Some of the methods commonly used for binary classification are:
 
 ##Model Selection
 
-Following the (#Scikit Learn Machine Learning Map)http://scikit-learn.org/stable/tutorial/machine_learning_map/,
+Following the [Scikit Learn Machine Learning Map](http://scikit-learn.org/stable/tutorial/machine_learning_map/),
 the data has more than 50 samples but less than 100k samples and we have targets for the training data.
 According to this guide, a LinearSVC, a kind of support vector machine, is the most appropriate classifier choice.
 
@@ -151,5 +148,10 @@ The advantage of starting with numerical values is that it was straightforward t
 
 #Future Studies
 Using sklearn's DictVectorizer, which is used to convert feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. http://scikit-learn.org/stable/modules/feature_extraction.html
+
+##Extra Info
+
+For regression, Y must be a numeric vector with the same number of elements as the number of rows of X.
+For classification, Y can be any of these data types.
 
 
