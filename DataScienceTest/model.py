@@ -24,6 +24,7 @@ from sklearn.svm import LinearSVC
 from sklearn.cross_validation import KFold
 from sklearn.cross_validation import cross_val_score
 from sklearn.grid_search import GridSearchCV
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.externals import joblib
@@ -65,11 +66,13 @@ def loads_data(filepath):
     return all_data, fieldnames
 
 
-def list_of_dicts_to_np(list_of_dicts, fields=None):
+def list_of_dicts_to_np(list_of_dicts, fields=None, dictvect=False):
     """Convert list of dictionaries to numpy array for feature extraction.
 
     fields: list of fieldnames to use. If fields == None, use all fieldnames.
             Else, use subset of fieldnames specified.
+    dictvect: flag for using DictVectorizer, which transforms lists of feature-
+            value mappings to vectors. Returns np array
 
     """
     
@@ -87,13 +90,18 @@ def list_of_dicts_to_np(list_of_dicts, fields=None):
     if not fields and list_of_dicts:
         fields = list_of_dicts[0].keys()
 
-    # initialize a np array of zeros
-    X = np.zeros([len(list_of_dicts), len(fields)])
+    if dictvect == True:
+        dv = DictVectorizer(sparse=False)
+        # todo: update to only use desired fields
+        X = dv.fit_transform(list_of_dicts)
+    else:
+        # initialize a np array of zeros
+        X = np.zeros([len(list_of_dicts), len(fields)])
 
-    # populate np array with data
-    for i, row in enumerate(list_of_dicts):
-        for j, field in enumerate(fields):
-            X[i, j] = list_of_dicts[i][field]
+        # populate np array with data
+        for i, row in enumerate(list_of_dicts):
+            for j, field in enumerate(fields):
+                X[i, j] = list_of_dicts[i][field]
 
     return X
 
@@ -346,7 +354,10 @@ def train_classifier():
     # Trial 1: Numerical Data Only
     subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
 
-    X = list_of_dicts_to_np(all_data, subfields)
+    # use subfields, numerical data only (no dictvectorize)
+    # X = list_of_dicts_to_np(all_data, subfields)
+    # use all fields, use dictvectorize
+    X = list_of_dicts_to_np(all_data, dictvect=True)
     # normalize the data before fitting
     # X = scale(X)  # this had a neglible effect on the accuracy
     y = loads_labels_to_np(json_path, all_data, 'unique_id')

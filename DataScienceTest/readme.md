@@ -165,7 +165,7 @@ This result is similar to the best score produced by the grid search above.
 
 
 ##Future Work
-Using sklearn's DictVectorizer, which is used to convert feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. http://scikit-learn.org/stable/modules/feature_extraction.html
+Using sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which is used to convert feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. http://scikit-learn.org/stable/modules/feature_extraction.html
 
 
 ###Implementing Chi-Square Test for Feature Importance
