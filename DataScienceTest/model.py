@@ -429,6 +429,13 @@ def train_classifier():
     X = list_of_dicts_to_np(all_data, subfields, subtypes)
     y = loads_labels_to_np(json_path, all_data, 'unique_id')
 
+    count = 0
+    for val in y:
+        if val == 1:
+            count += 1
+    print "Number of 1s in targets:", count
+    print "Number of 0s in targets:", len(y) - count
+    
     min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
     fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
 

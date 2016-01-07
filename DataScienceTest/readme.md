@@ -19,22 +19,22 @@ unique_id,city,state,contact_title,category,PRMKTS,EQMKTS,RAMKTS,MMKTS,has_faceb
 VYDAQRLK,New York,NY,Manager,Insurance,0.518403977655587,0.6246364292624702,0.5197196212855738,0.5542533427345436,True,False,2.0,3862000,262
 ```
 
-When looking at the data, several questions immediately came to mind:
+###Balanced Data
+Imbalanced data typically refers to a problem with classification problems where the classes are not represented equally. Looking at the target values, we find the following:
 
-*What do PRMKTS, EQMKTS, RAMKTS, and MMKTS stand for?
-*How important is the location?
-*How important a predictor are the social media components? (Facebook, Twitter)
-*What is the degree connected?
-*What value is the revenue in?
-*Currency. What if this data isn't all in the same currency? (This would prevent us from normalizing the revenue.)
-*Would using ALL of this information overfit the data? What is actually relevant?
+```
+Number of 1s in targets: 817
+Number of 0s in targets: 2183
+```
+
+Therefore, of the 3,000 samples in the training data, about 25% of them are in class 1 (target = 1) and 75% are in class 2 (target = 2), such that the ratio of instances in class 1 to instances in class 2 is 1:3, which is imbalanced.
 
 ###model.py Functions for Preparing Data
-loads_data(filepath): To make it easier to access the data later, this function loads the CSV values into a list of dictionaries, one dictionary per each entry (row) where the dictionary keys are the fieldnames from the CSV header. 
+**loads_data(filepath)**: To make it easier to access the data later, this function loads the CSV values into a list of dictionaries, one dictionary per each entry (row) where the dictionary keys are the fieldnames from the CSV header. 
 
-list_of_dicts_to_np(list_of_dicts, fields=None): For ease of computations using scikit-learn (sklearn), this function converts the list of dictionaries to a single numpy array. The 'fields' parameter allows for the use of a subset of fields. If none, the function uses all values, both numerical and non-numerical.
+**list_of_dicts_to_np(list_of_dicts, fieldnames=None, fieldtypes=None, dictvect=False)**: For ease of computations using scikit-learn (sklearn), this function converts the list of dictionaries to a single numpy array. The 'fieldnames' parameter allows for the use of a subset of fields input as a list, for which 'fieldtypes' is a corresponding list of types for each field. If none, the function uses all values, both numerical and non-numerical. 'dictvect' is a flag for using sklearn's built-in DictVectorizer, which transforms lists of feature-value mappings to vectors.
 
-loads_labels_to_np(filepath, list_of_dicts, id_field): Loads the JSON target labels and matches to the samples in list_of_dicts using the specified 'id_field'. Here, 'id_field'='unique_id'
+**loads_labels_to_np(filepath, list_of_dicts, id_field)**: Loads the JSON target labels and matches to the samples in list_of_dicts using the specified 'id_field'. Here, 'id_field'='unique_id'
 
 
 ##Feature Selection
@@ -52,9 +52,17 @@ Sample 1: "New York, NY", 40 --> [1, 0, 40]
 Sample 2: "Denver, CO", 15 --> [0, 1, 15]
 ```
 
-Questions that arose when initially picking features included:
+When looking at the data, several questions immediately came to mind related to feature selection:
+
+* What do PRMKTS, EQMKTS, RAMKTS, and MMKTS stand for?
+* How important is the location?
 * How many cities are in the dataset? Would this result in a large number of unimportant features? (spare matrix)
 * Should we instead use states? Or maybe clusters of cities (metro areas)? Or maybe city population? (not given here)
+* How important a predictor are the social media components? (Facebook, Twitter)
+* What is the degree connected?
+* What value is the revenue in?
+* What if this data isn't all in the same currency? (This would prevent us from normalizing the revenue.)
+* Would using ALL of this information overfit the data? What is actually relevant?
 
 ### Trial 1: ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
 
@@ -62,9 +70,9 @@ The advantage of starting with numerical values is that it was straightforward t
 
 ### Trial 2: Trial 1 + 'has_facebook' + 'has_twitter'
 
-When evaluating the model accuracy below, it seemed that using only the four fields from Trial 1 was not capturing enough information to accurately predict business marketability. The next logical step seemed to be to include some social media aspects, as social media is often a key component of marketing. But does this depend on the kind of business you are in? If you have a social media account as a manufacturing company that probably does not make as much of an impact as for a dating service that has social media accounts, given that the latter is inherently more social.
+When evaluating the model accuracy below, it seemed that using only the four fields from Trial 1 was not capturing enough information to accurately predict business marketability. The next logical step seemed to be to include some social media aspects, as social media is often a key component of marketing. But does this depend on the kind of business you are in? If you have a social media account as a manufacturing company that probably does not make as much of an impact as for a dating service that has social media accounts, given that the latter is inherently a more social kind of business.
 
-Thinking ahead to allowing for use of the non-binarized information (e.g., location, category, contact_title), at this point I use sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which converts feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. To become more familiar with DictVectorizer, I used it on the entirity of X, that is, I did not use the intended subfields but instead used all fieldnames. Surprisingly, this resulted in an extremely spare matrix:
+To make use of the non-binarized information (e.g., location, category, contact_title), I used sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which converts feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by sklearn estimators, to include location and industry fields. To become more familiar with DictVectorizer, I used it on the entirity of X, that is, I did not use the intended subfields but instead used all fieldnames. Surprisingly, this resulted in an extremely large and therefore extremely sparse matrix:
 
 ```
 >>> X
@@ -79,9 +87,9 @@ array([[ 0.,  0.,  0., ...,  0.,  0.,  0.],
 (3000, 17709)
 ```
 
-So it seemed that it *is* possible in this case to end up with n_features > n_samples, which is important to keep in mind when selecting a model, as is discussed in the following section. Backing off, I decided to manually convert the 'has_facebook' and 'has_twitter' boolean values to their numerical equivalents, 0 (False) and 1 (True). At this point I went back to model.py's loads_data() to grab the data type information from the first entry, hoping that all of the boolean values are well-formed (i.e., 'False' not 'false'), and then added some type checks to list_of_dicts_to_np() to convert the data.
+So it seemed that it **is** possible in this case to end up with **n_features > n_samples**, which is important to keep in mind when selecting a model, as is discussed in the Model Selection section. Backing off, I decided to manually convert the 'has_facebook' and 'has_twitter' boolean values to their numerical equivalents, 0 (False) and 1 (True). At this point I went back to model.py's loads_data() to grab the data type information from the first entry, hoping that all of the boolean values are well-formed (i.e., 'False' not 'false'), and then added some type checks to list_of_dicts_to_np() to convert the data.
 
-At this point I ran into a big bug, realizing that all of my data was <type 'str'>. I thought that I had been working with numerical data, so I had a bit more cleaning to do. 
+At this point I ran into a big bug, realizing that all of my data was "<type 'str'>". I thought that I had been working with numerical data, so I had a bit more cleaning to do. The first row of the CSV file as an entry in list_of_dicts is shown below, along with the type for one of the MKTS fields:
 
 ```
 >>> list_of_dicts[0]
@@ -90,9 +98,9 @@ At this point I ran into a big bug, realizing that all of my data was <type 'str
 <type 'str'>
 ```
 
-After creating some helper functions to check whether the strings represented int, float, or bool types, I re-ran Trial 1 and noted that the results were the same as for when the data consisted of strings. 
+After creating some helper functions to check whether the strings represented int, float, or bool types (**represents_ int**, **represents_ float**, and **represents_bool**, respectively), I re-ran Trial 1 and noted that the results were the same as for when the data consisted of strings. 
 
-##Choose an Algorithm
+##Model Selection
 Often the hardest part of solving a machine learning problem can be finding the right estimator for the job, as different estimators are better suited for different types of data and different problems.
 
 There are tradeoffs between several characteristics of algorithms, such as:
@@ -111,8 +119,6 @@ Some of the methods commonly used for binary classification are:
 * Neural networks
 * Logistic regression
 
-###Model Selection
-
 Following the [sklearn Machine Learning Map](http://scikit-learn.org/stable/tutorial/machine_learning_map/),
 because the data has more than 50 samples but less than 100k samples and we have targets for the training data, a LinearSVC, a specific kind of support vector machine, is the most appropriate classifier choice.
 
@@ -120,10 +126,10 @@ Support vector machines (SVMs) are a set of supervised learning methods used for
 
 The disadvantages of support vector machines include:
 
-* If the number of features is much greater than the number of samples, the method is likely to perform poorly.
+* If the number of features is much greater than the number of samples, **n_features > n_samples**, the method is likely to perform poorly.
 * SVMs do not directly provide probability estimates, these are calculated using an expensive five-fold cross-validation.
 
-For this exercise, we certainly have less than 3,000 features, even if we considered each unique city and unique contact as its own feature.Therefore, we should expect LinearSVC to perform well.
+For this exercise, I assumed that we would certainly have less than 3,000 features, even if we considered each unique city and unique contact as its own feature and that we should therefore expect LinearSVC to perform well. However, after using **DictVectorize** I found that a very large, very sparse matrix could result, violating this assumption.
 
 LinearSVC is a specific form of traditional C-Support Vector Classification that uses a linear kernel. Of note is that in sklearn, LinearSVC is implemented in terms of liblinear rather than libsvm, which offers more flexibility in the choice of penalties and loss functions and **should scale better to large numbers of samples**. For traditional SVC, the fit time complexity is more than quadratic with the number of samples, which makes it hard to scale to datasets with more than a few 10,000 samples. Also of note is that the algorithm underlying LinearSVC is [very sensitive to extreme values in its input](http://stackoverflow.com/questions/20624353/why-cant-linearsvc-do-this-simple-classification). 
 
@@ -141,7 +147,7 @@ class sklearn.svm.LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0
 
 Of these, the following is relevant to this exercise:
 
-*C: Penalty parameter of the error term. A valuation of "how badly" you want to properly fit the data.
+* C: Penalty parameter of the error term. A valuation of "how badly" you want to properly fit the data.
 [Source: Stack Exchange](http://stats.stackexchange.com/questions/31066/what-is-the-influence-of-c-in-svms-with-linear-kernel)
 
 ####Trial 1: Using Only PRMKTS, EQMKTS, RAMKTS, and MMKTS
@@ -180,6 +186,8 @@ Best Parameters:
 Best Score:
 0.746666666667
 ```
+
+Clearly, there was neglible change in the scores such that the use of these additional features did not improve performance. The low value for the penalty (C) may indicate that the grid search accounted for the imbalanced dataset. The penalty introduces bias to the model, forcing it to pay more attention to the minority class.
 
 ###Solutions to Overfitting
 Evaluating the quality of the model on the data used to fit the model can lead to overfitting. The solution to this issue is twofold:
@@ -246,29 +254,15 @@ Fold: 10 | Mean Precision Score: 0.77813043166
 Fold: 10 | Mean Recall Score: 0.104836387741
 ```
 
-While the accuracy and precision are relatively good at more than 70%, the recall is very poor, at about 10-13%.
+While the accuracy and precision are relatively good at more than 70%, the recall is very poor, at about 10%. The recall is a measure of a classifier's completeness. According to sklearn, "A system with high recall but low precision returns many results, but most of its predicted labels are incorrect when compared to the training labels. A system with high precision but low recall is just the opposite, returning very few results, but most of its predicted labels are correct when compared to the training labels. An ideal system with high precision and high recall will return many results, with all results labeled correctly.""
 
-According to sklearn, "A system with high recall but low precision returns many results, but most of its predicted labels are incorrect when compared to the training labels. A system with high precision but low recall is just the opposite, returning very few results, but most of its predicted labels are correct when compared to the training labels. An ideal system with high precision and high recall will return many results, with all results labeled correctly.""
-
-
-
-##Future Work
-*Being able to make use of string information without creating a severely sparse matrix, perhaps by looking for clusters of locations or finding a way to normalize the cities by population.
-*Circuling back to DictVectorizer to see if the fact that my dictionary items were all strings (not int, float, bool, and str) was why the sparse matrix had so many features.
-*Why are Trials 1 and 2 producing the exact same results? --> This might be something to explore in future work.
-
-
-###Implementing Chi-Square Test for Feature Importance
-One way to evaluate feature importance is using a chi-square test. In statistics, the chi-square test is applied to test the independence of two events. A high chi-square value indicates that the hypothesis of independence is incorrect.
-
-Selecting features using Chi-square aims to simplify the classifier by training on only the "most important" features. A "weaker" classifier -- trained on fewer features -- is often preferable when training data is limited.
-
-
-##Extra Info
-
-According to sklearn, "[LinearSVC's] underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.
-
-For regression, Y must be a numeric vector with the same number of elements as the number of rows of X.
-For classification, Y can be any of these data types.
+##Future Work: "If I had another day ..."
+* Rebalance the training dataset such that there are an equal number of targets in each class by resampling the dataset.
+ Over-sampling the data, repeating data points from the underrepresented class, may be a good approach given that we have less than 10,000 samples.
+* Implement the chi-square test for feature importance. In statistics, the chi-square test is applied to test the independence of two events. A high chi-square value indicates that the hypothesis of independence is incorrect. Selecting features using Chi-square aims to simplify the classifier by training on only the "most important" features. A "weaker" classifier -- trained on fewer features -- is often preferable when training data is limited. This could therefore improve the classifier's predictions by allowing us to use only the most important features.
+* Try a completely different model, or even try SVC using kernel='linear' and compare results. Decision trees such as Random Forest often perform well on imbalanced datasets.
+* Make use of string information without creating a severely sparse matrix, perhaps by looking for clusters of locations or finding a way to normalize the cities by population.
+* Circle back to DictVectorizer to see if the fact that my dictionary items were all strings (not int, float, bool, and str) was why the sparse matrix had so many features.
+* Explore why are trials 1 and 2 produce nearly the same accuracy results
 
 
