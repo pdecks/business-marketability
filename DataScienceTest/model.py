@@ -99,7 +99,7 @@ def list_of_dicts_to_np(list_of_dicts, fields=None):
 
 
 def loads_labels_to_np(filepath, list_of_dicts, id_field):
-    """Load JSON target labels and match to all_data"""
+    """Load JSON target labels and match to list_of_dicts samples"""
 
     # check data types
     if type(list_of_dicts) != list or type(list_of_dicts[0]) != dict:
