@@ -12,8 +12,7 @@ The steps for supervised learning are:
 * Use Fitted Model for Predictions
 
 ##Prepare Data
-From completing the engineering exercise in implementing a CSV parser class without the use of Python's built-in csv module, the choice
-was clear how I would parse the data ... using the csv module, of course! The following sample shows the header and the first sample from DS_train.csv:
+From completing the engineering exercise in implementing a CSV parser class without the use of Python's built-in csv module, the choice was clear how I would parse the data ... using the csv module, of course! The following sample shows the header and the first sample from DS_train.csv:
 
 ```
 unique_id,city,state,contact_title,category,PRMKTS,EQMKTS,RAMKTS,MMKTS,has_facebook,has_twitter,degree_connected,revenue,headcount
@@ -33,7 +32,7 @@ When looking at the data, several questions immediately came to mind:
 ###model.py Functions for Preparing Data
 loads_data(filepath): To make it easier to access the data later, this function loads the CSV values into a list of dictionaries, one dictionary per each entry (row) where the dictionary keys are the fieldnames from the CSV header. 
 
-list_of_dicts_to_np(list_of_dicts, fields=None): For ease of computations using Scikit Learn, this function converts the list of dictionaries to a single numpy array. The 'fields' parameter allows for the use of a subset of fields. If none, the function uses all values, both numerical and non-numerical.
+list_of_dicts_to_np(list_of_dicts, fields=None): For ease of computations using scikit-learn (sklearn), this function converts the list of dictionaries to a single numpy array. The 'fields' parameter allows for the use of a subset of fields. If none, the function uses all values, both numerical and non-numerical.
 
 loads_labels_to_np(filepath, list_of_dicts, id_field): Loads the JSON target labels and matches to the samples in list_of_dicts using the specified 'id_field'. Here, 'id_field'='unique_id'
 
@@ -58,10 +57,31 @@ Questions that arose when initially picking features included:
 * How many cities are in the dataset? Would this result in a large number of unimportant features? (spare matrix)
 * Should we instead use states? Or maybe clusters of cities (metro areas)? Or maybe city population? (not given here)
 
-## Trial 1:
-Using only market values: ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
+### Trial 1: ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
 
 The advantage of starting with numerical values is that it was straightforward to create a features matrix for all of the samples, given that the LinearSVC model is expecting numerical input. This also seemed like a reasonable place to start, as I assumed, perhaps incorrectly, that the MKTS values were equally important.
+
+### Trial 2: Trial 1 + 'has_facebook' + 'has_twitter'
+
+When evaluating the model accuracy below, it seemed that using only the four fields from Trial 1 was not capturing enough information to accurately predict business marketability. The next logical step seemed to be to include some social media aspects,
+as social media is often a key component of marketing. But does this depend on the kind of business you are in? If you have a social media account as a manufacturing company that probably does not make as much of an impact as for a dating service that has social media accounts, given that the latter is inherently more social.
+
+Thinking ahead to allowing for use of the non-binarized information (e.g., location, category, contact_title), at this point I use sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which converts feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. To become more familiar with DictVectorizer, I used it on the entirity of X, that is, I did not use the intended subfields but instead used all fieldnames. Surprisingly, this resulted in an extremely spare matrix:
+
+```
+>>> X
+array([[ 0.,  0.,  0., ...,  0.,  0.,  0.],
+       [ 0.,  0.,  0., ...,  0.,  0.,  0.],
+       [ 0.,  0.,  0., ...,  0.,  0.,  0.],
+       ..., 
+       [ 0.,  0.,  0., ...,  0.,  0.,  0.],
+       [ 0.,  0.,  0., ...,  0.,  0.,  0.],
+       [ 0.,  0.,  0., ...,  0.,  0.,  0.]])
+>>> X.shape
+(3000, 17709)
+```
+
+So it seemed that it *is* possible in this case to end up with n_features > n_samples, which is important to keep in mind when selecting a model, as is discussed in the following section. Backing off, I decided to manually convert the 'has_facebook' and 'has_twitter' boolean values to their numerical equivalents, 0 (False) and 1 (True). At this point I went back to model.py's loads_data() to grab the data type information from the first entry, hoping that all of the boolean values are well-formed (i.e., 'False' not 'false'), and then added some type checks to list_of_dicts_to_np() to convert the data.
 
 
 ##Choose an Algorithm
@@ -85,7 +105,7 @@ Some of the methods commonly used for binary classification are:
 
 ###Model Selection
 
-Following the [Scikit Learn Machine Learning Map](http://scikit-learn.org/stable/tutorial/machine_learning_map/),
+Following the [sklearn Machine Learning Map](http://scikit-learn.org/stable/tutorial/machine_learning_map/),
 because the data has more than 50 samples but less than 100k samples and we have targets for the training data, a LinearSVC, a specific kind of support vector machine, is the most appropriate classifier choice.
 
 Support vector machines (SVMs) are a set of supervised learning methods used for classification, regression, and outliers detection. The objective of a Linear SVC (Support Vector Classifier) is to fit to the data you provide, returning a "best fit" hyperplane that divides, or categorizes, your data. From there, after getting the hyperplane, you can then feed some features to your classifier to see what the "predicted" class is. 
@@ -97,13 +117,13 @@ The disadvantages of support vector machines include:
 
 For this exercise, we certainly have less than 3,000 features, even if we considered each unique city and unique contact as its own feature.Therefore, we should expect LinearSVC to perform well.
 
-LinearSVC is a specific form of traditional C-Support Vector Classification that uses a linear kernel. Of note is that in Scikit Learn, LinearSVC is implemented in terms of liblinear rather than libsvm, which offers more flexibility in the choice of penalties and loss functions and **should scale better to large numbers of samples**. For traditional SVC, the fit time complexity is more than quadratic with the number of samples, which makes it hard to scale to datasets with more than a few 10,000 samples. Also of note is that the algorithm underlying LinearSVC is [very sensitive to extreme values in its input](http://stackoverflow.com/questions/20624353/why-cant-linearsvc-do-this-simple-classification). 
+LinearSVC is a specific form of traditional C-Support Vector Classification that uses a linear kernel. Of note is that in sklearn, LinearSVC is implemented in terms of liblinear rather than libsvm, which offers more flexibility in the choice of penalties and loss functions and **should scale better to large numbers of samples**. For traditional SVC, the fit time complexity is more than quadratic with the number of samples, which makes it hard to scale to datasets with more than a few 10,000 samples. Also of note is that the algorithm underlying LinearSVC is [very sensitive to extreme values in its input](http://stackoverflow.com/questions/20624353/why-cant-linearsvc-do-this-simple-classification). 
 
-This class supports both dense and sparse input and the multiclass support is handled according to a one-vs-the-rest scheme. Scikit Learn suggests that for optimal performance, one should use a C-ordered numpy.ndarray (dense input).
+This class supports both dense and sparse input and the multiclass support is handled according to a one-vs-the-rest scheme. sklearn suggests that for optimal performance, one should use a C-ordered numpy.ndarray (dense input).
 
 
 ###Model Hyperparameters
-Hyperparameters are model parameters set before the training process. According to Scikit Learn, "parameters that are not directly learnt within estimators can be set by searching a parameter space for the best [cross-validation] score." We can tune hyperparameters using the built-in function [Grid Search](http://scikit-learn.org/stable/modules/grid_search.html#grid-search). 
+Hyperparameters are model parameters set before the training process. According to sklearn, "parameters that are not directly learnt within estimators can be set by searching a parameter space for the best [cross-validation] score." We can tune hyperparameters using the built-in function [Grid Search](http://scikit-learn.org/stable/modules/grid_search.html#grid-search). 
 
 In the case of [LinearSVC](http://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html), grid search takes the following hyperparameters:
 
@@ -148,7 +168,7 @@ one for evaluation: the test set
 * Avoid overfitting by using simpler models (e.g. linear classifiers instead of gaussian kernel SVM) or by increasing the regularization parameter of the model if available (see the docstring of the model for details)
 * When the amount of labeled data available is small, it may not be feasible to construct training and test sets. In that case, you can choose to use k-fold cross validation: divide the dataset into k = 10 parts of (roughly) equal size, then for each of these ten parts, train the classifier on the other nine and test on the held-out part
 
-Thus for this exercise, I made use of Scikit Learn's built in helper function cross_val_score:
+Thus for this exercise, I made use of sklearn's built in helper function cross_val_score:
 
 Using LinearSVC with default hyperparameters and using cross_val_score with 10 folds:
 ```
@@ -165,7 +185,7 @@ This result is similar to the best score produced by the grid search above.
 
 
 ##Future Work
-Using sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which is used to convert feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. http://scikit-learn.org/stable/modules/feature_extraction.html
+*Being able to make use of string information without creating a severely sparse matrix, perhaps by looking for clusters of locations or finding a way to normalize the cities by population.
 
 
 ###Implementing Chi-Square Test for Feature Importance
@@ -176,7 +196,7 @@ Selecting features using Chi-square aims to simplify the classifier by training 
 
 ##Extra Info
 
-According to Scikit Learn, "[LinearSVC's] underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.
+According to sklearn, "[LinearSVC's] underlying C implementation uses a random number generator to select features when fitting the model. It is thus not uncommon to have slightly different results for the same input data. If that happens, try with a smaller tol parameter.
 
 For regression, Y must be a numeric vector with the same number of elements as the number of rows of X.
 For classification, Y can be any of these data types.

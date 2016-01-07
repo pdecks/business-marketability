@@ -44,6 +44,8 @@ def loads_data(filepath):
         for i, row in enumerate(datareader):
             if i == 0:
                 fieldnames = row
+            elif i == 1:
+                fieldtypes = [type(x) for x in row]
             else:
                 break
     csvfile.close()
@@ -63,10 +65,10 @@ def loads_data(filepath):
                 # break
     csvfile.close()
 
-    return all_data, fieldnames
+    return all_data, fieldnames, fieldtypes
 
 
-def list_of_dicts_to_np(list_of_dicts, fields=None, dictvect=False):
+def list_of_dicts_to_np(list_of_dicts, fieldnames=None, fieldtypes=None, dictvect=False):
     """Convert list of dictionaries to numpy array for feature extraction.
 
     fields: list of fieldnames to use. If fields == None, use all fieldnames.
@@ -80,29 +82,44 @@ def list_of_dicts_to_np(list_of_dicts, fields=None, dictvect=False):
     if type(list_of_dicts) != list or type(list_of_dicts[0]) != dict:
         raise TypeError('list_of_dicts must be a list of dictionaries')
     
-    if fields and type(fields) != list:
-        raise TypeError('fields must be a list of field names')
+    if fieldnames and type(fieldnames) != list:
+        raise TypeError('fieldnames must be a list of strings')
+
+    if fieldtypes and type(fieldtypes) != list:
+        raise TypeError('fieldtypes must be a list of strings')
 
     if not list_of_dicts:
         raise ValueError('list_of_dicts must not be an empty list')
 
     # set default field subset
-    if not fields and list_of_dicts:
-        fields = list_of_dicts[0].keys()
+    if not fieldnames and list_of_dicts:
+        fieldnames = list_of_dicts[0].keys()
+        fieldtypes = [type(x) for x in row]
 
-    if dictvect == True:
-        dv = DictVectorizer(sparse=False)
-        # todo: update to only use desired fields
-        X = dv.fit_transform(list_of_dicts)
+    # TODO: determine size of matrix to create if not all types are numerical or boolean
+    if str in fieldtypes:
+        pass 
+    # Found that DictVectorizer resulted in a sparse matrix of shape (3000, 17709)
+    # if dictvect == True:
+    #     dv = DictVectorizer(sparse=False)
+    #     # todo: update to only use desired fields
+    #     X = dv.fit_transform(list_of_dicts)
     else:
         # initialize a np array of zeros
-        X = np.zeros([len(list_of_dicts), len(fields)])
+        X = np.zeros([len(list_of_dicts), len(fieldnames)])
 
         # populate np array with data
         for i, row in enumerate(list_of_dicts):
-            for j, field in enumerate(fields):
-                X[i, j] = list_of_dicts[i][field]
+            for j, field in enumerate(fieldnames):
+                if fieldtype[j] == bool:
+                    if list_of_dicts[i][field]:
+                        X[i,j] = 1
+                    else:
+                        X[i,j] = 0
+                else:
+                    X[i, j] = list_of_dicts[i][field]
 
+    import pdb; pdb.set_trace()
     return X
 
 
@@ -348,16 +365,24 @@ def train_classifier():
     json_path = 'data/DS_train_labels.json'
 
     # load the data
-    all_data, fieldnames = loads_data(train_path)
+    all_data, fieldnames, fieldtypes = loads_data(train_path)
 
     # create np arrays for training data and target labels
     # Trial 1: Numerical Data Only
     subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
+    subtypes = [fieldtypes[fieldnames.index(x)] for x in subfields]
 
-    # use subfields, numerical data only (no dictvectorize)
-    # X = list_of_dicts_to_np(all_data, subfields)
-    # use all fields, use dictvectorize
-    X = list_of_dicts_to_np(all_data, dictvect=True)
+
+    # Trial 1: use subfields, numerical data only (no dictvectorize)
+    # X = list_of_dicts_to_np(all_data, subfields, )
+    
+    # Trial 2a: use all fields, use dictvectorize
+    # X = list_of_dicts_to_np(all_data, dictvect=True)
+    
+    # Trial 2b: use subfields, numerical data and booleans only (no dictvectorize)
+    X = list_of_dicts_to_np(all_data, subfields, subtypes)
+    
+
     # normalize the data before fitting
     # X = scale(X)  # this had a neglible effect on the accuracy
     y = loads_labels_to_np(json_path, all_data, 'unique_id')
