@@ -410,22 +410,23 @@ def train_classifier():
     all_data, fieldnames, fieldtypes = loads_data(train_path)
 
     # create np arrays for training data and target labels
+    
     # Trial 1: Numerical Data Only
-    subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
-    subtypes = [fieldtypes[fieldnames.index(x)] for x in subfields]
-
-
-    # Trial 1: use subfields, numerical data only (no dictvectorize)
-    # X = list_of_dicts_to_np(all_data, subfields, )
+    # subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS']
+    # subtypes = [fieldtypes[fieldnames.index(x)] for x in subfields]
+    # X = list_of_dicts_to_np(all_data, subfields )
     
     # Trial 2a: use all fields, use dictvectorize
     # X = list_of_dicts_to_np(all_data, dictvect=True)
     
     # Trial 2b: use subfields, numerical data and booleans only (no dictvectorize)
-    X = list_of_dicts_to_np(all_data, subfields, subtypes)
+    subfields = ['PRMKTS', 'RAMKTS', 'EQMKTS', 'MMKTS', 'has_facebook', 'has_twitter']
+    subtypes = [fieldtypes[fieldnames.index(x)] for x in subfields]
 
     # normalize the data before fitting
     # X = scale(X)  # this had a neglible effect on the accuracy
+
+    X = list_of_dicts_to_np(all_data, subfields, subtypes)
     y = loads_labels_to_np(json_path, all_data, 'unique_id')
 
     min_num_folds, max_num_folds, num_iter = get_folds_and_iter()

@@ -40,8 +40,7 @@ loads_labels_to_np(filepath, list_of_dicts, id_field): Loads the JSON target lab
 ##Feature Selection
 Features are distinct traits that can be used to describe each business in a quantitative manner. In the case of CSV files, it is relatively straightforward to extract features, because the data is structured. An example of unstructured data would be a text document where the number of words varies in each document.
 
-Categorical features, such as the business' location, have no obvious numerical representation but can easily be converted
-to a numerical feature. For each distinct location, we can create a new feature that can be valued to 1.0 if the category is matching or 0.0 if not.
+Categorical features, such as the business' location, have no obvious numerical representation but can easily be converted to a numerical feature. For each distinct location, we can create a new feature that can be valued to 1.0 if the category is matching or 0.0 if not.
 
 ```
 Example:
@@ -63,8 +62,7 @@ The advantage of starting with numerical values is that it was straightforward t
 
 ### Trial 2: Trial 1 + 'has_facebook' + 'has_twitter'
 
-When evaluating the model accuracy below, it seemed that using only the four fields from Trial 1 was not capturing enough information to accurately predict business marketability. The next logical step seemed to be to include some social media aspects,
-as social media is often a key component of marketing. But does this depend on the kind of business you are in? If you have a social media account as a manufacturing company that probably does not make as much of an impact as for a dating service that has social media accounts, given that the latter is inherently more social.
+When evaluating the model accuracy below, it seemed that using only the four fields from Trial 1 was not capturing enough information to accurately predict business marketability. The next logical step seemed to be to include some social media aspects, as social media is often a key component of marketing. But does this depend on the kind of business you are in? If you have a social media account as a manufacturing company that probably does not make as much of an impact as for a dating service that has social media accounts, given that the latter is inherently more social.
 
 Thinking ahead to allowing for use of the non-binarized information (e.g., location, category, contact_title), at this point I use sklearn's [DictVectorizer](http://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.DictVectorizer.html), which converts feature arrays represented as lists of standard Python dict objects to the NumPy/SciPy representation used by scikit-learn estimators, to include location and industry fields. To become more familiar with DictVectorizer, I used it on the entirity of X, that is, I did not use the intended subfields but instead used all fieldnames. Surprisingly, this resulted in an extremely spare matrix:
 
@@ -167,7 +165,21 @@ This accuracy score is essentially unchanged from the LinearSVC model with C=1.0
 
 
 ####Trial 2: Trial 1 + has_facebook + has_twitter
+The results of the grid search for the LinearSVC model for Trial 2 are presented below:
 
+```
+Best Estimator:
+LinearSVC(C=0.27825594022071259, class_weight=None, dual=True,
+     fit_intercept=True, intercept_scaling=1, loss='squared_hinge',
+     max_iter=1000, multi_class='ovr', penalty='l2', random_state=None,
+     tol=0.0001, verbose=0)
+
+Best Parameters:
+{'C': 0.27825594022071259, 'class_weight': None}
+
+Best Score:
+0.746666666667
+```
 
 ###Solutions to Overfitting
 Evaluating the quality of the model on the data used to fit the model can lead to overfitting. The solution to this issue is twofold:
@@ -188,15 +200,62 @@ Accuracy: 0.75 (+/- 0.01)
 
 This result is similar to the best score produced by the grid search above.
 
-* Bias and Variance http://www.astroml.org/sklearn_tutorial/practical.html#astro-biasvariance
+In addition to accuracy, we should also consider precision and recall, which can easily be done using sklearn's built in metrics: accuracy_score, precision_score, and recall_score. The following are the scores for a 10-fold cross-validation using 10 iterations:
 
+```
+-- k = 10 --
+Fold: 1 | Mean Score: 0.750666666667
+Fold: 1 | Mean Accuracy Score: 0.750666666667
+Fold: 1 | Mean Precision Score: 0.735594718319
+Fold: 1 | Mean Recall Score: 0.1173459856
+Fold: 2 | Mean Score: 0.739333333333
+Fold: 2 | Mean Accuracy Score: 0.739333333333
+Fold: 2 | Mean Precision Score: 0.62837995338
+Fold: 2 | Mean Recall Score: 0.0848157995233
+Fold: 3 | Mean Score: 0.775
+Fold: 3 | Mean Accuracy Score: 0.775
+Fold: 3 | Mean Precision Score: 0.76807408278
+Fold: 3 | Mean Recall Score: 0.11676876975
+Fold: 4 | Mean Score: 0.744666666667
+Fold: 4 | Mean Accuracy Score: 0.744666666667
+Fold: 4 | Mean Precision Score: 0.738177257525
+Fold: 4 | Mean Recall Score: 0.137281430934
+Fold: 5 | Mean Score: 0.755333333333
+Fold: 5 | Mean Accuracy Score: 0.755333333333
+Fold: 5 | Mean Precision Score: 0.626998491704
+Fold: 5 | Mean Recall Score: 0.10802702354
+Fold: 6 | Mean Score: 0.740333333333
+Fold: 6 | Mean Accuracy Score: 0.740333333333
+Fold: 6 | Mean Precision Score: 0.737537046287
+Fold: 6 | Mean Recall Score: 0.108718739381
+Fold: 7 | Mean Score: 0.738666666667
+Fold: 7 | Mean Accuracy Score: 0.738666666667
+Fold: 7 | Mean Precision Score: 0.737918470418
+Fold: 7 | Mean Recall Score: 0.113045829193
+Fold: 8 | Mean Score: 0.751333333333
+Fold: 8 | Mean Accuracy Score: 0.751333333333
+Fold: 8 | Mean Precision Score: 0.760164981218
+Fold: 8 | Mean Recall Score: 0.132664668407
+Fold: 9 | Mean Score: 0.730666666667
+Fold: 9 | Mean Accuracy Score: 0.730666666667
+Fold: 9 | Mean Precision Score: 0.693796595561
+Fold: 9 | Mean Recall Score: 0.102969325421
+Fold: 10 | Mean Score: 0.734
+Fold: 10 | Mean Accuracy Score: 0.734
+Fold: 10 | Mean Precision Score: 0.77813043166
+Fold: 10 | Mean Recall Score: 0.104836387741
+```
 
-##Discussion
+While the accuracy and precision are relatively good at more than 70%, the recall is very poor, at about 10-13%.
+
+According to sklearn, "A system with high recall but low precision returns many results, but most of its predicted labels are incorrect when compared to the training labels. A system with high precision but low recall is just the opposite, returning very few results, but most of its predicted labels are correct when compared to the training labels. An ideal system with high precision and high recall will return many results, with all results labeled correctly.""
+
 
 
 ##Future Work
 *Being able to make use of string information without creating a severely sparse matrix, perhaps by looking for clusters of locations or finding a way to normalize the cities by population.
 *Circuling back to DictVectorizer to see if the fact that my dictionary items were all strings (not int, float, bool, and str) was why the sparse matrix had so many features.
+*Why are Trials 1 and 2 producing the exact same results? --> This might be something to explore in future work.
 
 
 ###Implementing Chi-Square Test for Feature Importance
