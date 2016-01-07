@@ -83,7 +83,7 @@ array([[ 0.,  0.,  0., ...,  0.,  0.,  0.],
 
 So it seemed that it *is* possible in this case to end up with n_features > n_samples, which is important to keep in mind when selecting a model, as is discussed in the following section. Backing off, I decided to manually convert the 'has_facebook' and 'has_twitter' boolean values to their numerical equivalents, 0 (False) and 1 (True). At this point I went back to model.py's loads_data() to grab the data type information from the first entry, hoping that all of the boolean values are well-formed (i.e., 'False' not 'false'), and then added some type checks to list_of_dicts_to_np() to convert the data.
 
-At this point I ran into a big bug, realizing that all of my data was <type 'str'>. I thought that I had been working with numerical data, so I had a bit more cleaning to do.
+At this point I ran into a big bug, realizing that all of my data was <type 'str'>. I thought that I had been working with numerical data, so I had a bit more cleaning to do. 
 
 ```
 >>> list_of_dicts[0]
@@ -92,6 +92,7 @@ At this point I ran into a big bug, realizing that all of my data was <type 'str
 <type 'str'>
 ```
 
+After creating some helper functions to check whether the strings represented int, float, or bool types, I re-ran Trial 1 and noted that the results were the same as for when the data consisted of strings. 
 
 ##Choose an Algorithm
 Often the hardest part of solving a machine learning problem can be finding the right estimator for the job, as different estimators are better suited for different types of data and different problems.
@@ -195,6 +196,7 @@ This result is similar to the best score produced by the grid search above.
 
 ##Future Work
 *Being able to make use of string information without creating a severely sparse matrix, perhaps by looking for clusters of locations or finding a way to normalize the cities by population.
+*Circuling back to DictVectorizer to see if the fact that my dictionary items were all strings (not int, float, bool, and str) was why the sparse matrix had so many features.
 
 
 ###Implementing Chi-Square Test for Feature Importance

@@ -45,7 +45,17 @@ def loads_data(filepath):
             if i == 0:
                 fieldnames = row
             elif i == 1:
-                fieldtypes = [type(x) for x in row]
+                # fieldtypes = [type(x) for x in row]  # return all <type 'str'>
+                fieldtypes = []
+                for s in row:
+                    if represents_int(s):
+                        fieldtypes.append(int)
+                    elif represents_float(s):
+                        fieldtypes.append(float)
+                    elif represents_bool(s) != -1:
+                        fieldtypes.append(bool)
+                    else:
+                        fieldtypes.append(str)
             else:
                 break
     csvfile.close()
@@ -91,33 +101,46 @@ def list_of_dicts_to_np(list_of_dicts, fieldnames=None, fieldtypes=None, dictvec
     if not list_of_dicts:
         raise ValueError('list_of_dicts must not be an empty list')
 
-    # set default field subset
+    # set default field subset and determine field types
     if not fieldnames and not fieldtypes and list_of_dicts:
         fieldnames = list_of_dicts[0].keys()
-        fieldtypes = [type(x) for x in row]
-    import pdb; pdb.set_trace()
-    # TODO: determine size of matrix to create if not all types are numerical or boolean
-    if str in fieldtypes:
-        pass 
+        # fieldtypes = [type(x) for x in row]
+        fieldtypes = []
+        for s in fieldnames:
+            if represents_int(s):
+                fieldtypes.append(int)
+            elif represents_float(s):
+                fieldtypes.append(float)
+            elif represents_bool(s) != -1:
+                fieldtypes.append(bool)
+            else:
+                fieldtypes.append(str)
+
     # Found that DictVectorizer resulted in a sparse matrix of shape (3000, 17709)
     # if dictvect == True:
     #     dv = DictVectorizer(sparse=False)
     #     # todo: update to only use desired fields
     #     X = dv.fit_transform(list_of_dicts)
-    else:
+
+    # TODO: determine size of matrix to create if not all types are numerical or boolean
+    if str in fieldtypes:
+        pass 
+    else:  # contains int, float, or bool only
         # initialize a np array of zeros
         X = np.zeros([len(list_of_dicts), len(fieldnames)])
 
         # populate np array with data
         for i, row in enumerate(list_of_dicts):
             for j, field in enumerate(fieldnames):
-                if fieldtype[j] == bool:
-                    if list_of_dicts[i][field]:
+                if fieldtypes[j] == bool:
+                    if represents_bool(list_of_dicts[i][field]):
                         X[i,j] = 1
                     else:
                         X[i,j] = 0
+                elif fieldtypes[j] == int:
+                    X[i, j] = int(list_of_dicts[i][field])
                 else:
-                    X[i, j] = list_of_dicts[i][field]
+                    X[i, j] = float(list_of_dicts[i][field])
 
     
     return X
@@ -315,6 +338,25 @@ def represents_int(s):
         return False
 
 
+def represents_float(s):
+    """Helper function for checking if input string represents a float"""
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+def represents_bool(s):
+    """Helper function for checking if input string represents a boolean"""
+    if s == 'True' or s == 'true' or s == 'T':
+        return True
+    elif s == 'False' or s == 'false' or s == 'F':
+        return False
+    else:
+        return -1
+
+
 def get_folds_and_iter():
     """
     Prompt the user for number of Kfolds (min and max) and iterations
@@ -381,7 +423,6 @@ def train_classifier():
     
     # Trial 2b: use subfields, numerical data and booleans only (no dictvectorize)
     X = list_of_dicts_to_np(all_data, subfields, subtypes)
-    
 
     # normalize the data before fitting
     # X = scale(X)  # this had a neglible effect on the accuracy
