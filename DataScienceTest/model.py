@@ -12,12 +12,9 @@ Objectives:
 import random
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 import csv
 import json
 import time
-
-from matplotlib import gridspec
 
 from sklearn.cross_validation import train_test_split
 from sklearn.svm import LinearSVC
@@ -29,7 +26,6 @@ from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.externals import joblib
 from sklearn.preprocessing import scale
-
 
 
 ## DIRECTORY FOR PICKLING CLASSIFIER 
@@ -161,7 +157,7 @@ def loads_labels_to_np(filepath, list_of_dicts, id_field):
         json_data = json.load(data_file)
 
     y = [0] * len(list_of_dicts)
-    # import pdb; pdb.set_trace()
+    
     for i, row in enumerate(list_of_dicts):
         y[i] = json_data[row[id_field]]
 
@@ -403,10 +399,11 @@ def train_classifier():
     """
 
     # define filepaths
+    test_path = 'data/DS_test.csv'
     train_path = 'data/DS_train.csv'
     json_path = 'data/DS_train_labels.json'
 
-    # load the data
+    # load the training data
     all_data, fieldnames, fieldtypes = loads_data(train_path)
 
     # create np arrays for training data and target labels
@@ -433,11 +430,13 @@ def train_classifier():
     for val in y:
         if val == 1:
             count += 1
-    print "Number of 1s in targets:", count
+    print "\nNumber of 1s in targets:", count
     print "Number of 0s in targets:", len(y) - count
-    
-    min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
-    fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
+
+    decision = raw_input("\nPerform manual cross-validation? Y or N >> ")
+    if decision.lower() == 'y':
+        min_num_folds, max_num_folds, num_iter = get_folds_and_iter()
+        fold_avg_scores = score_kfolds(X, y, min_num_folds, max_num_folds, num_iter)
 
     clf = LinearSVC()
     
@@ -461,33 +460,38 @@ def train_classifier():
     print "Best Score:"
     print gscv.best_score_
 
-
     # CREATE and TRAIN the classifier
-    clf = LinearSVC().fit(X, y)
+    clf = LinearSVC(C=0.278).fit(X, y)
 
+    # PREDICT targets for test data
+    decision = raw_input("\nPredict targets for test data and create JSON file? Y or N >> ")
+    if decision.lower() == 'y':
+        # load the training data
+        test_data, fieldnames, fieldtypes = loads_data(test_path)
+
+        X_test = list_of_dicts_to_np(test_data, subfields, subtypes)
+
+        y_test = clf.predict(X_test)
+
+        results = {}
+        for i, sample in enumerate(test_data):
+            results[sample['unique_id']] = y_test[i]
+
+        with open('data/test_predictions.json', 'w') as outfile:
+            json.dump(results, outfile)
+                    
     # PERSIST THE MODEL / COMPONENTS
-    items_to_pickle = [clf]
-    pickling_paths = [pickle_path_SVC]
+    # items_to_pickle = [clf]
+    # pickling_paths = [pickle_path_SVC]
     
-    to_persist(items_to_pickle=items_to_pickle, pickling_paths=pickling_paths)
+    # to_persist(items_to_pickle=items_to_pickle, pickling_paths=pickling_paths)
 
     return
 
 
-
-
-
 if __name__ == "__main__":
-    ## TODO: fix datatypes (convert strings to floats)
 
     ## TRAIN AND PERSIST CLASSIFIER 
     to_train = raw_input("Train the LinearSVC classifier for categorization? Y or N >> ")
     if to_train.lower() == 'y':
         train_classifier()
-
-#     ## CHECK PERFORMANCE OF PICKLED CLASSIFIER ON DATA SET
-#     else:
-#         print
-#         to_test = raw_input("Check the pipeline classifier on the toy data set? Y or N >>")
-#         if to_test.lower() == 'y':
-#             check_toy_dataset()
